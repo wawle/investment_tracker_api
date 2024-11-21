@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import Account from './Account';
 
 // Kullanıcı modelinin tipini tanımlıyoruz
 export interface IUser extends Document {
@@ -26,14 +27,23 @@ const UserSchema: Schema<IUser> = new Schema(
   { timestamps: true } // createdAt ve updatedAt alanlarını otomatik olarak ekler
 );
 
+
+// Create company after save
+UserSchema.post("save", async function () {
+  const hasAccount = await Account.exists({ user: this._id });
+  if (hasAccount) return;
+  await Account.create({ user: this._id,  });
+});
+
 // Cascade delete accounts when a user is deleted
-UserSchema.pre('deleteOne', { document: true, query: false }, async function(next) {
+UserSchema.pre("findOneAndDelete", { document: true, query: false }, async function(next) {
+  const userId = (this as any)._conditions._id;
   try {
     // Access the document via 'this' when the middleware is set to { document: true, query: false }
-    console.log(`User ${this._id} is being deleted. Deleting related accounts.`);
+    console.log(`User ${userId} is being deleted. Deleting related accounts.`);
     
     // Cascade delete accounts related to this user
-    await this.model('Account').deleteMany({ user: this._id });
+    await Account.deleteMany({ user: userId });
 
     next(); // Proceed with the delete operation
   } catch (error:any) {

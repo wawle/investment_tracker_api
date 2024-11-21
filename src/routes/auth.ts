@@ -10,7 +10,7 @@ const router = express.Router();
 router.post('/register', register);
 
 // Get current user route 
-router.get('/me', getMe);
+router.get('/me/:id', getMe);
 
 export default router;
 

@@ -24,7 +24,6 @@ export const register = asyncHandler(
 );
 
 
-
 // @desc      Get current logged in user
 // @route     GET /api/v1/auth/me/:id
 // @access    Public
