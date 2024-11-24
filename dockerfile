@@ -13,9 +13,12 @@ RUN npm install
 # Adım 5: Proje dosyalarını kopyalıyoruz
 COPY . .
 
+RUN tsc -b
+
+RUN tsc --init
+
 # Adım 6: TypeScript dosyalarını derliyoruz
 RUN npm run build
-
 
 # Adım 7: Çalışma aşaması (yani, final imajı)
 FROM node:23-slim
