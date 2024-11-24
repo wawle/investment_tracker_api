@@ -1,7 +1,6 @@
 import express from 'express';
 import { getCrypto } from '../controllers/crypto';
 
-
 const router = express.Router({ mergeParams: true });
 
 // Get all exhanges 

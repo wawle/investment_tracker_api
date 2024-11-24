@@ -1,7 +1,6 @@
 import express from 'express';
 import { getStocks } from '../controllers/stocks';
 
-
 const router = express.Router({ mergeParams: true });
 
 // Get all exhanges 

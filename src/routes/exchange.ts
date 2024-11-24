@@ -1,7 +1,6 @@
 import express from 'express';
 import { getExchanges,getExchangeRates } from '../controllers/exchange';
 
-
 const router = express.Router({ mergeParams: true });
 
 // Get all exhanges 
