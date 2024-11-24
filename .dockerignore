@@ -4,3 +4,4 @@ Dockerfile
 .dockerignore
 src
 *.ts
+tsconfig.json

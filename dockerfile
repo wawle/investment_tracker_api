@@ -16,6 +16,7 @@ COPY . .
 # Adım 6: TypeScript dosyalarını derliyoruz
 RUN npm run build
 
+
 # Adım 7: Çalışma aşaması (yani, final imajı)
 FROM node:23-slim
 
