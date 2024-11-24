@@ -10,6 +10,8 @@ COPY package*.json ./
 # Adım 4: Bağımlılıkları yüklüyoruz
 RUN npm install
 
+RUN npm install --save-dev
+
 # Adım 5: Proje dosyalarını kopyalıyoruz
 COPY . .
 
