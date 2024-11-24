@@ -26,7 +26,7 @@ yarn start
 
 The API is live at [investment-tracker.devinbi.com](https://investment-tracker.devinbi.com)
 
-Extensive documentation with examples [here](https://test.devinbi.com)
+Extensive documentation with examples [here](https://api.devinbi.com)
 
 - Version: 1.0.0
 - License: MIT
