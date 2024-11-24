@@ -1,0 +1,60 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SERVER }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to Test or Prod
+        env:
+          BRANCH: ${{ github.ref_name }}
+          SERVER: ${{ secrets.SERVER }}
+          USER: ${{ secrets.USER }}
+        run: |
+          if [ "$BRANCH" == "dev" ]; then
+            ssh $USER@$SERVER "
+              cd /var/www/investment_tracker_api && \
+              git pull origin dev && \
+
+              # Build the Docker image (you can specify the exact tag)
+              docker build -t investment_tracker_api_test:latest .
+
+              # Stop and remove the old container
+              docker stop investment_tracker_api_test
+              docker rm investment_tracker_api_test
+
+              # Run a new container with the latest image
+              docker run -d -p 4001:4000 --name investment_tracker_api_test investment_tracker_api_test:latest
+            "
+          elif [ "$BRANCH" == "main" ]; then
+            ssh $USER@$SERVER "
+              cd /var/www/investment_tracker_api && \
+              git pull origin main && \
+              
+              # Build the Docker image (you can specify the exact tag)
+              docker build -t investment_tracker_api_prod:latest .
+
+              # Stop and remove the old container
+              docker stop investment_tracker_api_prod
+              docker rm investment_tracker_api_prod
+
+              # Run a new container with the latest image
+              docker run -d -p 4000:4000 --name investment_tracker_api_prod investment_tracker_api_prod:latest
+            "
+          fi
