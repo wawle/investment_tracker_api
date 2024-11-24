@@ -27,22 +27,7 @@ jobs:
           SERVER: ${{ secrets.SERVER }}
           USER: ${{ secrets.USER }}
         run: |
-          if [ "$BRANCH" == "dev" ]; then
-            ssh $USER@$SERVER "
-              cd /var/www/investment_tracker_api && \
-              git pull origin dev && \
-
-              # Build the Docker image (you can specify the exact tag)
-              docker build -t investment_tracker_api_test:latest .
-
-              # Stop and remove the old container
-              docker stop investment_tracker_api_test
-              docker rm investment_tracker_api_test
-
-              # Run a new container with the latest image
-              docker run -d -p 4001:4000 --name investment_tracker_api_test investment_tracker_api_test:latest
-            "
-          elif [ "$BRANCH" == "main" ]; then
+         if [ "$BRANCH" == "main" ]; then
             ssh $USER@$SERVER "
               cd /var/www/investment_tracker_api && \
               git pull origin main && \
