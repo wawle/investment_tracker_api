@@ -18,8 +18,6 @@ RUN npm install -g typescript
 # Adım 5: Proje dosyalarını kopyalıyoruz
 COPY . .
 
-RUN tsc -b
-
 RUN tsc --init
 
 # Adım 6: TypeScript dosyalarını derliyoruz
