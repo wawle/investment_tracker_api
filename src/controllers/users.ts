@@ -58,7 +58,7 @@ export const updateUser = asyncHandler(async (req: Request, res: Response, next:
 });
 
 // @desc      Delete user
-// @route     DELETE /api/v1/auth/users/:id
+// @route     DELETE /api/v1/users/:id
 // @access    Public
 export const deleteUser = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const user = await User.findByIdAndDelete(req.params.id);

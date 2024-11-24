@@ -24,7 +24,8 @@ const UserSchema: Schema<IUser> = new Schema(
       ]
     }
   },
-  { timestamps: true } // createdAt ve updatedAt alanlarını otomatik olarak ekler
+  { timestamps: true,toJSON: { virtuals: true },
+  toObject: { virtuals: true } } // createdAt ve updatedAt alanlarını otomatik olarak ekler
 );
 
 
@@ -36,9 +37,9 @@ UserSchema.post("save", async function () {
 });
 
 // Cascade delete accounts when a user is deleted
-UserSchema.pre("findOneAndDelete", { document: true, query: false }, async function(next) {
+UserSchema.pre("findOneAndDelete",  async function(next) {
   const userId = (this as any)._conditions._id;
-  try {
+
     // Access the document via 'this' when the middleware is set to { document: true, query: false }
     console.log(`User ${userId} is being deleted. Deleting related accounts.`);
     
@@ -46,9 +47,7 @@ UserSchema.pre("findOneAndDelete", { document: true, query: false }, async funct
     await Account.deleteMany({ user: userId });
 
     next(); // Proceed with the delete operation
-  } catch (error:any) {
-    next(error); // If an error occurs, pass it to the next middleware
-  }
+
 });
 
 // Reverse populate with virtuals

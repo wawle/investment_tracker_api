@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { IUser } from './User';
-import Invest from './Invest';
+import Asset from './Asset';
 
 export interface IAccount extends Document {
   name: string;
@@ -11,7 +11,7 @@ const AccountSchema: Schema<IAccount> = new Schema(
   {
     name: {
       type: String,
-      required: [true, 'Please add a fullname'],
+      required: [true, 'Please add a name'],
       default: "Account"
     },
     user: {
@@ -20,29 +20,26 @@ const AccountSchema: Schema<IAccount> = new Schema(
         required: true
       }
   },
-  { timestamps: true } 
+  { timestamps: true ,toJSON: { virtuals: true },
+  toObject: { virtuals: true }} 
 );
 
 // Cascade delete accounts when a Account is deleted
-AccountSchema.pre("findOneAndDelete", { document: true, query: false }, async function(next) {
+AccountSchema.pre("findOneAndDelete",  async function(next) {
   const accountId = (this as any)._conditions._id;
 
-  try {
     // Access the document via 'this' when the middleware is set to { document: true, query: false }
-    console.log(`Account ${accountId} is being deleted. Deleting related invests.`);
+    console.log(`Account ${accountId} is being deleted. Deleting related assets.`);
     
     // Cascade delete accounts related to this Account
-    await Invest.deleteMany({ account: accountId });
+    await Asset.deleteMany({ account: accountId });
 
     next(); // Proceed with the delete operation
-  } catch (error:any) {
-    next(error); // If an error occurs, pass it to the next middleware
-  }
 });
 
 // Reverse populate with virtuals
-AccountSchema.virtual('invests', {
-  ref: 'Invest',
+AccountSchema.virtual('assets', {
+  ref: 'Asset',
   localField: '_id',
   foreignField: 'account',
   justOne: false
