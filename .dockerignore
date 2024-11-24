@@ -2,6 +2,3 @@ node_modules
 npm-debug.log
 Dockerfile
 .dockerignore
-src
-*.ts
-tsconfig.json

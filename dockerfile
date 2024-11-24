@@ -1,41 +1,35 @@
-# Adım 1: Node.js'i içeren bir temel imaj seçiyoruz
+# Step 1: Use a Node.js base image for building the project
 FROM node:23 AS build
 
-# Adım 2: Çalışma dizinini oluşturuyoruz
+# Step 2: Set the working directory to /app
 WORKDIR /app
 
-# Adım 3: package.json ve package-lock.json dosyalarını kopyalıyoruz
+# Step 3: Copy package.json and package-lock.json to install dependencies
 COPY package*.json ./
 
-# Adım 4: Bağımlılıkları yüklüyoruz
+# Step 4: Install project dependencies (including devDependencies)
 RUN npm install
 
-RUN npm install --save-dev
-
-RUN npm install -g typescript
-
-
-# Adım 5: Proje dosyalarını kopyalıyoruz
+# Step 5: Copy the rest of the project files (excluding files listed in .dockerignore)
 COPY . .
 
-RUN tsc --init
+# Step 6: Run TypeScript build
+RUN npm run build   # This will run "tsc" based on your "build" script in package.json
 
-# Adım 6: TypeScript dosyalarını derliyoruz
-RUN npm run build
-
-# Adım 7: Çalışma aşaması (yani, final imajı)
+# Step 7: Create a smaller runtime image (based on a slim version of Node)
 FROM node:23-slim
 
+# Set working directory in the runtime image
 WORKDIR /app
 
-# Adım 8: Derlenmiş dosyaları kopyalıyoruz
+# Step 8: Copy compiled JavaScript files from the build image
 COPY --from=build /app/dist /app
 
-# Adım 9: Bağımlılıkları tekrar kopyalıyoruz
+# Step 9: Copy node_modules from the build image to the runtime image
 COPY --from=build /app/node_modules /app/node_modules
 
-# Adım 10: API'yi çalıştırıyoruz
+# Step 10: Start the application (assuming compiled files are in the "dist" folder)
 CMD ["node", "dist/server.js"]
 
-# Adım 11: Docker'ın dışarıya açacağı portu belirliyoruz
+# Step 11: Expose the application port
 EXPOSE 4000
