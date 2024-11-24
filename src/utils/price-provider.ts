@@ -6,7 +6,6 @@ export const priceProvider = async (market: string, search: string) => {
     const browser = await puppeteer.launch(); // Tarayıcıyı başlat
     const page = await browser.newPage(); // Yeni bir sayfa oluştur
     const url = constants.market_list.find((item) => item.market === market)?.url;
-    console.log({url})
 
     if (!url) return [];
 
