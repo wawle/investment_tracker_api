@@ -14,7 +14,7 @@ RUN npm install
 COPY . .
 
 # Step 6: Run TypeScript build
-RUN npm run build   # This will run "tsc" based on your "build" script in package.json
+RUN npm run build   
 
 # Step 7: Create a smaller runtime image (based on a slim version of Node)
 FROM node:23-slim
@@ -29,7 +29,7 @@ COPY --from=build /app/dist /app
 COPY --from=build /app/node_modules /app/node_modules
 
 # Step 10: Start the application (assuming compiled files are in the "dist" folder)
-CMD ["node", "dist/server.js"]
+CMD ["node", "server.js"]
 
 # Step 11: Expose the application port
 EXPOSE 4000
