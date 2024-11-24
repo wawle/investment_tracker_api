@@ -80,8 +80,6 @@ export const deleteAsset = asyncHandler(async (req: Request, res: Response, next
 // @route     GET /api/v1/assets/types
 // @access    Public
 export const getAssetTypes = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-
-
   res.status(200).json({
     success: true,
     data: constants.asset_type_list

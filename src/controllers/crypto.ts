@@ -7,8 +7,6 @@ import { Market } from '../utils/enums';
 // @route     GET /api/v1/crypto
 // @access    Public
 export const getCrypto = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-   
-
     // Get the search query param (optional)
   const search = req.query.search ? req.query.search.toString() : '';
 

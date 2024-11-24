@@ -5,8 +5,6 @@ import * as xml2js from 'xml2js';
 import asyncHandler from '../middleware/async';
 import { NextFunction, Request, Response } from 'express';
 
-
-
 export const getExchanges = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { search  } = req.query;
   const exchanges = await fetchExchange();
@@ -24,7 +22,6 @@ export const getExchanges = asyncHandler(async (req: Request, res: Response, nex
       });
   });
 
-
   export const getExchangeRates = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const exchanges = await fetchExchangeRates();
   
@@ -33,7 +30,6 @@ export const getExchanges = asyncHandler(async (req: Request, res: Response, nex
           data: exchanges
         });
     });
-
 
 
   // TCMB'nin döviz kuru verilerini almak için XML URL'si

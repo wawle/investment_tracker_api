@@ -4,7 +4,6 @@ import Asset from '../models/Asset';
 import { Market } from '../utils/enums';
 import { priceProvider } from '../utils/price-provider';
 
-
 export const getInvestmentsByAccountId = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const assets = (await Asset.find({account: req.params.accountId}).select("symbol avg_price amount market"))
     const assetInfos = assets.map((item) => ({symbol: item.symbol,market: Market.Bist100}));
@@ -42,7 +41,6 @@ export const getInvestmentsByAccountId = asyncHandler(async (req: Request, res: 
     });
 
 
-  
 
 // Finnhub API'sine birden fazla sembol ile tek seferde istek gönder
 export async function fetchStockPrices(assetInfos: {symbol: string,market: Market}[]) {
@@ -61,8 +59,6 @@ export async function fetchStockPrices(assetInfos: {symbol: string,market: Marke
         }
       });
 
-      
-  
       return invenstments;
     } catch (error) {
       console.error("Error fetching stock prices:", error);

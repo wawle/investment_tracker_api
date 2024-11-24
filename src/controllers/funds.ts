@@ -3,15 +3,7 @@ import puppeteer from 'puppeteer';
 import asyncHandler from '../middleware/async';
 import { NextFunction, Request, Response } from 'express';
 
-
-
-
-
-
-
 export const getFunds = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  
-  
     // Get the search query param (optional)
     const search = req.query.search ? req.query.search.toString() : '';
   
@@ -48,9 +40,6 @@ interface FundData {
     price: string;
   }
 
-
-
-  
   async function fetchIsBankFunds(): Promise<FundData[]> {
     // Launch the browser
     const browser = await puppeteer.launch({ headless: true });
@@ -92,9 +81,6 @@ interface FundData {
   }
   
   
-  
-  
-  
   async function fetchYapiKrediBankFunds(): Promise<FundData[]> {
     // Launch the browser
     const browser = await puppeteer.launch({ headless: true });
@@ -132,10 +118,6 @@ interface FundData {
     // Return the extracted fund data
     return fundData;
   }
-  
-  
-  
-  
   
   async function fetchAkBankFunds(): Promise<FundData[]> {
     // Launch the browser
