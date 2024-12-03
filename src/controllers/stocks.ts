@@ -18,7 +18,7 @@ export const getStocks = asyncHandler(async (req: Request, res: Response, next: 
   // Use fetchPriceData to get the data, passing the search term
   const data = await priceProvider(market.market, search);
 
-    res.status(200).json({status: true, data});
+    res.status(200).json({success: true, data});
   });
   
 
