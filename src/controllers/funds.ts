@@ -43,7 +43,7 @@ interface FundData {
 
   async function fetchIsBankFunds(): Promise<FundData[]> {
     // Launch the browser
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({ headless: true ,args: ['--no-sandbox', '--disable-setuid-sandbox'] });
     const page = await browser.newPage();
   
     // Navigate to the URL
@@ -84,7 +84,7 @@ interface FundData {
   
   async function fetchYapiKrediBankFunds(): Promise<FundData[]> {
     // Launch the browser
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({ headless: true ,args: ['--no-sandbox', '--disable-setuid-sandbox'] });
     const page = await browser.newPage();
   
     // Navigate to the URL
@@ -122,7 +122,7 @@ interface FundData {
   
   async function fetchAkBankFunds(): Promise<FundData[]> {
     // Launch the browser
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({ headless: true,args: ['--no-sandbox', '--disable-setuid-sandbox']  });
     const page = await browser.newPage();
   
     // Navigate to the URL
@@ -170,7 +170,7 @@ interface FundData {
   }
 
   async function getFundInfo(code: string): Promise<FundData> {
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({ headless: true,args: ['--no-sandbox', '--disable-setuid-sandbox']  });
     const page = await browser.newPage();
     await page.goto(`https://www.besfongetirileri.com/fon-karti/${code}`, {
       waitUntil: 'domcontentloaded',

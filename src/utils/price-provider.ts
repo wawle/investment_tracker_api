@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer';
 
 
 export const priceProvider = async (market: string, search: string) => {
-    const browser = await puppeteer.launch(); // Tarayıcıyı başlat
+    const browser = await puppeteer.launch({headless: true,args: ['--no-sandbox', '--disable-setuid-sandbox'] }); // Tarayıcıyı başlat
     const page = await browser.newPage(); // Yeni bir sayfa oluştur
     const url = constants.market_list.find((item) => item.market === market)?.url;
 
