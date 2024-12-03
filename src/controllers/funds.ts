@@ -8,24 +8,25 @@ export const getFunds = asyncHandler(async (req: Request, res: Response, next: N
     const search = req.query.search ? req.query.search.toString() : '';
   
  // Fetch data from multiple sources using Promise.all
- const [isbank,yapikredi ]: FundData[][] = await Promise.all([
+ const [isbank,yapikredi, anadoluemeklilik ]: FundData[][] = await Promise.all([
     // fetchAkBankFunds(), 
     fetchIsBankFunds(), 
-    fetchYapiKrediBankFunds()
+    fetchYapiKrediBankFunds(),
+    fetchBesFunds(),
   ]);
 
   // Flatten the array of arrays into a single array of FundData
-  const data: FundData[] = [...isbank,...yapikredi].filter((item) => item.fundName && item.fundCode && item.price)
+  const data: FundData[] = [...isbank,...yapikredi,...anadoluemeklilik].filter((item) => item.fundName && item.fundCode && item.price)
 
   // If a search term is provided, filter the data by fund name or code
   const filteredData = search
     ? data.filter((fund) =>
-        fund.fundName.toLowerCase().includes(search) ||
-        fund.fundCode.toLowerCase().includes(search)
+        fund.fundName.toLowerCase().includes(search.toLowerCase()) ||
+        fund.fundCode.toLowerCase().includes(search.toLowerCase())
       )
     : data;
      
-  
+
     // Send back the final response
     res.status(200).json({
       success: true,
@@ -151,6 +152,58 @@ interface FundData {
     });
   
     // Close the browser
+    await browser.close();
+  
+    // Return the extracted fund data
+    return fundData;
+  }
+
+  async function fetchBesFunds(): Promise<FundData[]> {
+    // Launch the browser
+    const beslist = ["AJA", "AEA"];
+
+    const fundData: FundData[] = await Promise.all(beslist.map((code) => getFundInfo(code)));
+
+  
+    // Return the extracted fund data
+    return fundData;
+  }
+
+  async function getFundInfo(code: string): Promise<FundData> {
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.goto(`https://www.besfongetirileri.com/fon-karti/${code}`, {
+      waitUntil: 'domcontentloaded',
+    })
+
+ // Extract the fund code and fund name
+   
+ const fundData =  await page.evaluate(() => {
+      // Get the text content from the <h1> tag
+      const h1Text = document.querySelector('h1')?.textContent?.trim();
+  
+      if (!h1Text) {
+        return { fundCode: '', fundName: '', price: "0" };
+      }
+  
+      // Split the text to get the fund code and fund name
+      const [fundCode, ...fundNameArray] = h1Text.split(' - ');
+  
+      // Join the fund name back together if there are multiple words after the dash
+      const fundName = fundNameArray.join(' ');
+  
+       // Select the price inside the <p> tag in the <li> with class "bg-white"
+       const priceElement = document.querySelector('li.bg-white p.fs-18.fw-600.color-1.mb-0');
+       const price = priceElement?.textContent?.trim() || "0"
+  
+      // Return the fund data object
+      return {    fundName,
+        fundCode,
+        price};
+    });
+
+
+  // Close the browser
     await browser.close();
   
     // Return the extracted fund data

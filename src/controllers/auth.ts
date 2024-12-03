@@ -35,7 +35,6 @@ export const getMe = asyncHandler(
     res.status(200).json({
       success: true,
       data: user,
-      test: "deneme"
     });
   }
 );
