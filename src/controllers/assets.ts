@@ -74,8 +74,6 @@ export const deleteAsset = asyncHandler(async (req: Request, res: Response, next
   });
 });
 
-
-
 // @desc      Get single asset
 // @route     GET /api/v1/assets/types
 // @access    Public

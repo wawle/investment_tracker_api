@@ -22,7 +22,7 @@ export const getCommodities = asyncHandler(async (req: Request, res: any, next: 
     });
 });
  
- async function scrapeGoldPrices() {
+async function scrapeGoldPrices() {
   // Launch the browser and open a new page
   const browser = await puppeteer.launch({ headless: true }); // Set headless: false if you want to see the browser
   const page = await browser.newPage();

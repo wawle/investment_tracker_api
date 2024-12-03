@@ -22,7 +22,7 @@ export const getExchanges = asyncHandler(async (req: Request, res: Response, nex
       });
   });
 
-  export const getExchangeRates = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getExchangeRates = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const exchanges = await fetchExchangeRates();
   
       res.status(200).json({
