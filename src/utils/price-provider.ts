@@ -26,6 +26,13 @@ export const priceProvider = async (market: string, search: string) => {
   
         // If a ticker name exists, filter it based on the search query
         if (tickerName && (!search || tickerName.toLowerCase().includes(search.toLowerCase()))) {
+          const tickerDescriptionElement: any = row.querySelector('.tickerDescription-GrtoTeat');
+          const tickerDescription = tickerDescriptionElement ? tickerDescriptionElement.innerText.trim() : null;
+  
+          // Extract SVG icon or image
+          const iconElement = row.querySelector('.tickerLogo-GrtoTeat');
+          const iconSrc = iconElement ? (iconElement as HTMLImageElement).src : null; // Get the image src if it's an image, or you can extract SVG directly
+  
           // Extract the price from the column specified by priceIndex
           const priceCell: any = row.querySelectorAll('td')[2];  // Access the specified column by index
           if (priceCell) {
@@ -38,6 +45,8 @@ export const priceProvider = async (market: string, search: string) => {
                 ticker: tickerName,
                 price: price,
                 currency: currency,
+                icon: iconSrc,
+                name: tickerDescription
               });
             }
           }
