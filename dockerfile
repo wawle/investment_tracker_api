@@ -10,6 +10,8 @@ COPY package*.json ./
 # Step 4: Install project dependencies (including devDependencies)
 RUN npm install
 
+RUN npx puppeteer browsers install chrome
+
 # Step 5: Copy the rest of the project files (excluding files listed in .dockerignore)
 COPY . .
 
