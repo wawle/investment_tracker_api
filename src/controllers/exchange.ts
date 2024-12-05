@@ -105,7 +105,15 @@ export const getCurrencyConversionRate = async (
   return rate;
 };
 
-export const fetchExchange = async () => {
+export const fetchExchange = async (): Promise<
+  {
+    code: string;
+    name: string;
+    currency_name: string;
+    buy: string;
+    sell: string;
+  }[]
+> => {
   const response = await axios.get(url);
 
   // XML'i JSON'a dönüştürmek için xml2js kullan
@@ -115,13 +123,23 @@ export const fetchExchange = async () => {
   // Döviz kuru verilerini içeren bölüm
   const exchangeRates = result.Tarih_Date.Currency;
 
-  const exchange = exchangeRates?.map((item: any) => ({
-    code: item["$"].CurrencyCode,
-    name: item.Isim,
-    currency_name: item.CurrencyName,
-    buy: item.BanknoteBuying,
-    sell: item.BanknoteSelling,
-  }));
+  const exchange = exchangeRates
+    ?.map((item: any) => ({
+      code: item["$"].CurrencyCode,
+      name: item.Isim,
+      currency_name: item.CurrencyName,
+      buy: item.BanknoteBuying,
+      sell: item.BanknoteSelling,
+    }))
+    .filter(
+      (item: {
+        code: string;
+        name: string;
+        currency_name: string;
+        buy: string;
+        sell: string;
+      }) => item.sell !== "" && item.sell !== null && item.sell !== undefined
+    ); // Filter out invalid 'sell' values
 
   return exchange;
 };

@@ -59,6 +59,14 @@ TransactionSchema.post("save", async function () {
   getAverageCost(this.asset as any);
 });
 
+// Call getAverageCost after save
+TransactionSchema.pre("findOneAndUpdate", async function (next) {
+  const transactionId = (this as any)._conditions._id;
+  const transaction = await Transaction.findById(transactionId);
+  if (!transaction) next();
+  getAverageCost(transaction?.asset as any);
+});
+
 // Call getAverageCost before remove
 TransactionSchema.pre("findOneAndDelete", function () {
   const transactionId = (this as any)._conditions._id;

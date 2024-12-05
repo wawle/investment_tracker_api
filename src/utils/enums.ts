@@ -15,7 +15,7 @@ export enum Market {
 
 export enum AssetType {
   Stock = "stock",
-  Exchange = "exhange",
+  Exchange = "exchange",
   Fund = "fund",
   Commodity = "commodity",
   Crypto = "crypto",

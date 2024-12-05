@@ -3,10 +3,11 @@ import { NextFunction, Request, Response } from "express";
 import Asset, { IAsset } from "../models/Asset";
 import { AssetType, Currency, Market } from "../utils/enums";
 import { priceProvider } from "../utils/price-provider";
-import { getCurrencyConversionRate } from "./exchange";
+import { fetchExchange, getCurrencyConversionRate } from "./exchange";
 import { fetchUsaStocks } from "./stocks";
 import { scrapeGoldPrices } from "./commodity";
 import { convertToNumber, roundToTwoDecimalPlaces } from "../utils";
+import { fetchFunds } from "./funds";
 
 // @desc      Get all investments by account Id
 // @route     GET /api/v1/investments/:accountId
@@ -45,7 +46,7 @@ export const getInvestmentsByAccountId = asyncHandler(
         groupedAssets.exchanges.push(asset);
       if (asset.type === AssetType.Fund) groupedAssets.funds.push(asset);
     });
-    console.log({ commo: groupedAssets.commodities });
+
     // Step 3: Fetch prices for each asset type
     const pricePromises = [];
 
@@ -65,10 +66,14 @@ export const getInvestmentsByAccountId = asyncHandler(
       pricePromises.push(
         fetchCommodityPrices(groupedAssets.commodities, currency as Currency)
       );
-    // if (groupedAssets.exchanges.length)
-    //   pricePromises.push(fetchExchangePrices(groupedAssets.exchanges));
-    // if (groupedAssets.funds.length)
-    //   pricePromises.push(fetchFundPrices(groupedAssets.funds));
+    if (groupedAssets.exchanges.length)
+      pricePromises.push(
+        fetchExchangePrices(groupedAssets.exchanges, currency as Currency)
+      );
+    if (groupedAssets.funds.length)
+      pricePromises.push(
+        fetchFundPrices(groupedAssets.funds, currency as Currency)
+      );
 
     // Wait for all price fetches to complete
     const priceResults: any = await Promise.all(pricePromises);
@@ -88,8 +93,8 @@ export const getInvestmentsByAccountId = asyncHandler(
       usaStocks: usaStockPrices,
       trStocks: trStockPrices,
       commodities: commodityPrices,
-      exchanges: [],
-      funds: [],
+      exchanges: exchangePrices,
+      funds: fundPrices,
     };
 
     const data = calculateBalances(investmentsWithProfitLoss);
@@ -359,6 +364,86 @@ const fetchCommodityPrices = async (
     const avgPrice = roundToTwoDecimalPlaces(avg_price * conversionRate);
     return {
       name,
+      symbol,
+      amount,
+      type,
+      currency: targetCurrency, // Change the currency to the target
+      currentPrice: roundToTwoDecimalPlaces(currentPrice),
+      avgPrice: roundToTwoDecimalPlaces(avgPrice),
+      profitLoss: roundToTwoDecimalPlaces((currentPrice - avgPrice) * amount),
+      profitLossPercentage: roundToTwoDecimalPlaces(
+        ((currentPrice - avgPrice) / avgPrice) * 100
+      ),
+    };
+  });
+};
+
+const fetchExchangePrices = async (
+  assets: IAsset[],
+  targetCurrency: Currency
+): Promise<IInvestmentWithProfitLoss[]> => {
+  const fromCurrency = assets[0].currency || Currency.TRY;
+  const conversionRate = await getCurrencyConversionRate(
+    fromCurrency,
+    targetCurrency
+  );
+
+  const exchanges = await fetchExchange();
+
+  // Fiyat bilgilerini döndürelim
+  return assets.map((asset) => {
+    let { sell, name }: any = exchanges.find(
+      (item) => item.code === asset.symbol
+    );
+
+    let currentPrice = parseFloat(sell);
+    const { avg_price, amount, type, symbol } = asset;
+
+    // Convert the current price and avg price to the target currency
+    currentPrice = roundToTwoDecimalPlaces(currentPrice * conversionRate);
+    const avgPrice = roundToTwoDecimalPlaces(avg_price * conversionRate);
+    return {
+      name,
+      symbol,
+      amount,
+      type,
+      currency: targetCurrency, // Change the currency to the target
+      currentPrice: roundToTwoDecimalPlaces(currentPrice),
+      avgPrice: roundToTwoDecimalPlaces(avgPrice),
+      profitLoss: roundToTwoDecimalPlaces((currentPrice - avgPrice) * amount),
+      profitLossPercentage: roundToTwoDecimalPlaces(
+        ((currentPrice - avgPrice) / avgPrice) * 100
+      ),
+    };
+  });
+};
+
+const fetchFundPrices = async (
+  assets: IAsset[],
+  targetCurrency: Currency
+): Promise<IInvestmentWithProfitLoss[]> => {
+  const fromCurrency = assets[0].currency || Currency.TRY;
+  const conversionRate = await getCurrencyConversionRate(
+    fromCurrency,
+    targetCurrency
+  );
+
+  const funds = await fetchFunds();
+
+  // Fiyat bilgilerini döndürelim
+  return assets.map((asset) => {
+    let { fundName, price }: any = funds.find(
+      (item) => item.fundCode === asset.symbol
+    );
+
+    let currentPrice = convertToNumber(price);
+    const { avg_price, amount, type, symbol } = asset;
+
+    // Convert the current price and avg price to the target currency
+    currentPrice = roundToTwoDecimalPlaces(currentPrice * conversionRate);
+    const avgPrice = roundToTwoDecimalPlaces(avg_price * conversionRate);
+    return {
+      name: fundName,
       symbol,
       amount,
       type,

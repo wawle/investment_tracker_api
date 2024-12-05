@@ -7,21 +7,7 @@ export const getFunds = asyncHandler(
     // Get the search query param (optional)
     const search = req.query.search ? req.query.search.toString() : "";
 
-    // Fetch data from multiple sources using Promise.all
-    const [isbank, yapikredi, anadoluemeklilik]: FundData[][] =
-      await Promise.all([
-        // fetchAkBankFunds(),
-        fetchIsBankFunds(),
-        fetchYapiKrediBankFunds(),
-        fetchBesFunds(),
-      ]);
-
-    // Flatten the array of arrays into a single array of FundData
-    const data: FundData[] = [
-      ...isbank,
-      ...yapikredi,
-      ...anadoluemeklilik,
-    ].filter((item) => item.fundName && item.fundCode && item.price);
+    const data = await fetchFunds();
 
     // If a search term is provided, filter the data by fund name or code
     const filteredData = search
@@ -44,6 +30,27 @@ interface FundData {
   fundName: string;
   fundCode: string;
   price: string;
+}
+
+export async function fetchFunds(): Promise<FundData[]> {
+  // Fetch data from multiple sources using Promise.all
+  const [isbank, yapikredi, anadoluemeklilik]: FundData[][] = await Promise.all(
+    [
+      // fetchAkBankFunds(),
+      fetchIsBankFunds(),
+      fetchYapiKrediBankFunds(),
+      fetchBesFunds(),
+    ]
+  );
+
+  // Flatten the array of arrays into a single array of FundData
+  const data: FundData[] = [
+    ...isbank,
+    ...yapikredi,
+    ...anadoluemeklilik,
+  ].filter((item) => item.fundName && item.fundCode && item.price);
+
+  return data;
 }
 
 async function fetchIsBankFunds(): Promise<FundData[]> {
