@@ -1,174 +1,374 @@
 import asyncHandler from "../middleware/async";
 import { NextFunction, Request, Response } from "express";
-import Asset from "../models/Asset";
-import { AssetType, Market } from "../utils/enums";
+import Asset, { IAsset } from "../models/Asset";
+import { AssetType, Currency, Market } from "../utils/enums";
 import { priceProvider } from "../utils/price-provider";
+import { getCurrencyConversionRate } from "./exchange";
+import { fetchUsaStocks } from "./stocks";
+import { scrapeGoldPrices } from "./commodity";
+import { convertToNumber, roundToTwoDecimalPlaces } from "../utils";
 
+// @desc      Get all investments by account Id
+// @route     GET /api/v1/investments/:accountId
+// @access    Public
 export const getInvestmentsByAccountId = asyncHandler(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const assets = await Asset.find({ account: req.params.accountId }).select(
-      "symbol avg_price amount market type"
-    );
+    const { accountId } = req.params;
+    const { currency = "usd" } = req.query;
 
-    // Group assets by type
-    const groupedAssets = assets.reduce((acc: any, asset) => {
-      if (!acc[asset.type]) {
-        acc[asset.type] = [];
-      }
-      acc[asset.type].push({
-        symbol: asset.symbol,
-        market: asset.market,
-        avg_price: asset.avg_price,
-        amount: asset.amount,
-      });
-      return acc;
-    }, {});
+    // Step 1: Retrieve all assets for the given accountId
+    const assets = await Asset.find({
+      account: accountId,
+    })
+      .select("symbol avg_price amount type currency")
+      .lean();
 
-    // Fetch prices for each asset type
-    const assetPrices: { [key: string]: any[] } = {};
+    // Step 2: Group assets by type
+    const groupedAssets: IGroupedAssets = {
+      crypto: [],
+      usaStocks: [],
+      trStocks: [],
+      commodities: [],
+      exchanges: [],
+      funds: [],
+    };
 
-    // Fetch stock prices
-    if (groupedAssets[AssetType.Stock]) {
-      const stockInfos = groupedAssets[AssetType.Stock].map((item: any) => ({
-        symbol: item.symbol,
-        market: item.market,
-      }));
-      assetPrices[AssetType.Stock] = await fetchStockPrices(stockInfos);
-    }
+    assets.forEach((asset) => {
+      if (asset.type === AssetType.Crypto) groupedAssets.crypto.push(asset);
+      if (asset.type === AssetType.Stock && asset.currency === Currency.USD)
+        groupedAssets.usaStocks.push(asset);
+      if (asset.type === AssetType.Stock && asset.currency === Currency.TRY)
+        groupedAssets.trStocks.push(asset);
+      if (asset.type === AssetType.Commodity)
+        groupedAssets.commodities.push(asset);
+      if (asset.type === AssetType.Exchange)
+        groupedAssets.exchanges.push(asset);
+      if (asset.type === AssetType.Fund) groupedAssets.funds.push(asset);
+    });
+    console.log({ commo: groupedAssets.commodities });
+    // Step 3: Fetch prices for each asset type
+    const pricePromises = [];
 
-    // Fetch crypto prices (you would implement similar logic for different asset types)
-    if (groupedAssets[AssetType.Crypto]) {
-      const cryptoInfos = groupedAssets[AssetType.Crypto].map((item: any) => ({
-        symbol: item.symbol,
-        market: Market.Crypto,
-      }));
-      assetPrices[AssetType.Crypto] = await fetchStockPrices(cryptoInfos);
-    }
+    if (groupedAssets.crypto.length)
+      pricePromises.push(
+        fetchCryptoPrices(groupedAssets.crypto, currency as Currency)
+      );
+    if (groupedAssets.usaStocks.length)
+      pricePromises.push(
+        fetchUsaStockPrices(groupedAssets.usaStocks, currency as Currency)
+      );
+    if (groupedAssets.trStocks.length)
+      pricePromises.push(
+        fetchTrStockPrices(groupedAssets.trStocks, currency as Currency)
+      );
+    if (groupedAssets.commodities.length)
+      pricePromises.push(
+        fetchCommodityPrices(groupedAssets.commodities, currency as Currency)
+      );
+    // if (groupedAssets.exchanges.length)
+    //   pricePromises.push(fetchExchangePrices(groupedAssets.exchanges));
+    // if (groupedAssets.funds.length)
+    //   pricePromises.push(fetchFundPrices(groupedAssets.funds));
 
-    // // Fetch prices for other asset types here (e.g., Funds, Commodities)
-    // // Example for fetching fund prices
-    // if (groupedAssets[AssetType.Fund]) {
-    //   const fundInfos = groupedAssets[AssetType.Fund].map((item) => ({
-    //     symbol: item.symbol,
-    //     market: item.market,
-    //   }));
-    //   assetPrices[AssetType.Fund] = await fetchFundPrices(fundInfos);
-    // }
+    // Wait for all price fetches to complete
+    const priceResults: any = await Promise.all(pricePromises);
 
-    // Calculate profit/loss for each asset type
-    const investmentsWithProfitLoss: any = [];
+    const [
+      cryptoPrices = [],
+      usaStockPrices = [],
+      trStockPrices = [],
+      commodityPrices = [],
+      exchangePrices = [],
+      fundPrices = [],
+    ] = priceResults;
 
-    for (const assetType in groupedAssets) {
-      const assetsByType = groupedAssets[assetType];
-      const prices = assetPrices[assetType] || [];
+    // Step 4: Calculate profit/loss for each asset type and populate the result
+    const investmentsWithProfitLoss: IGroupedInvestments = {
+      crypto: cryptoPrices,
+      usaStocks: usaStockPrices,
+      trStocks: trStockPrices,
+      commodities: commodityPrices,
+      exchanges: [],
+      funds: [],
+    };
 
-      assetsByType.forEach((asset: any, index: number) => {
-        const priceData = prices.find((price) => price.symbol === asset.symbol);
-        if (priceData) {
-          const currentPrice = parseFloat(
-            priceData.currentPrice.replace(",", ".")
-          );
-          const profitLoss = Number(
-            ((currentPrice - asset.avg_price) * asset.amount).toFixed(2)
-          );
-          const profitLossPercentage = Number(
-            (
-              ((currentPrice - asset.avg_price) / asset.avg_price) *
-              100
-            ).toFixed(2)
-          );
-
-          investmentsWithProfitLoss.push({
-            type: assetType,
-            symbol: asset.symbol,
-            market: asset.market,
-            avgPrice: asset.avg_price,
-            amount: asset.amount,
-            currentPrice,
-            profitLoss,
-            profitLossPercentage,
-          });
-        }
-      });
-    }
+    const data = calculateBalances(investmentsWithProfitLoss);
 
     res.status(200).json({
       success: true,
-      data: investmentsWithProfitLoss,
+      data,
     });
   }
 );
 
-// export const getInvestmentsByAccountId = asyncHandler(
-//   async (req: Request, res: Response, next: Function): Promise<void> => {
-//     const assets = await Asset.find({ account: req.params.accountId }).select(
-//       "symbol avg_price amount market type"
-//     );
-//     const assetInfos = assets.map((item) => ({
-//       symbol: item.symbol,
-//       market: item.market,
-//     }));
-//     const avg_prices = assets.map((item) => item.avg_price);
-//     const amounts = assets.map((item) => item.amount);
+// Get total balance grouped by type
+function calculateBalances(data: any) {
+  const result: any = {};
+  let globalTotalBalance = 0;
+  let globalTotalProfitLoss = 0;
+  let globalTotalProfitLossPercentage = 0;
+  let globalCount = 0;
 
-//     // this example only for stock asset types. I wanna build for all asset types
-//     const investments = await fetchStockPrices(assetInfos);
+  // Iterate through each type (crypto, stocks, commodities, etc.)
+  Object.keys(data).forEach((type) => {
+    const assets = data[type];
 
-//     // Yatırımcıların kar/zararlarını hesaplıyoruz
-//     const investmentsWithProfitLoss = investments.map((investment, index) => {
-//       const avgPrice = avg_prices[index];
-//       const amount = amounts[index];
-//       const currentPrice = parseFloat(
-//         investment.currentPrice.replace(",", ".")
-//       );
+    // If there are no assets of this type, skip it
+    if (assets.length === 0) {
+      return; // Skip empty arrays (e.g., no crypto, no stocks)
+    }
 
-//       // Kar/Zarar hesaplama
-//       const profitLoss = Number(
-//         ((currentPrice - avgPrice) * amount).toFixed(2)
-//       );
-//       const profitLossPercentage = Number(
-//         (((currentPrice - avgPrice) / avgPrice) * 100).toFixed(2)
-//       );
+    let totalBalance = 0;
+    let totalProfitLoss = 0;
+    let totalProfitLossPercentage = 0;
+    let count = 0;
 
-//       return {
-//         ...investment,
-//         currentPrice,
-//         avgPrice,
-//         amount,
-//         profitLoss,
-//         profitLossPercentage,
-//       };
-//     });
+    // Iterate over each asset to calculate totals and profits
+    assets.forEach((asset: IInvestmentWithProfitLoss) => {
+      const { amount, currentPrice, profitLoss, profitLossPercentage } = asset;
 
-//     res.status(200).json({
-//       success: true,
-//       data: investmentsWithProfitLoss,
-//     });
-//   }
-// );
+      // Calculate totalBalance for this asset
+      const balance = amount * currentPrice;
+      totalBalance += balance;
 
-export async function fetchStockPrices(
-  assetInfos: { symbol: string; market: Market }[]
-) {
-  try {
-    // Semboller virgülle ayrılmış şekilde birleştirilir
+      // Calculate total profit/loss and profitLossPercentage
+      totalProfitLoss += profitLoss;
 
-    const requests = assetInfos.map((item: any) =>
-      priceProvider(item.market, item.symbol)
-    );
-    const responses = await Promise.all(requests);
+      // Average profitLossPercentage across all assets of this type
+      totalProfitLossPercentage += profitLossPercentage;
+      count++;
 
-    // Fiyat bilgilerini döndürelim
-    const invenstments = responses.map((data: any, index) => {
-      return {
-        symbol: assetInfos[index].symbol,
-        currentPrice: data[0].price,
-      };
+      // Update global totals
+      globalTotalBalance += balance;
+      globalTotalProfitLoss += profitLoss;
+      globalTotalProfitLossPercentage += profitLossPercentage;
+      globalCount++;
     });
 
-    return invenstments;
-  } catch (error) {
-    console.error("Error fetching stock prices:", error);
-    return [];
-  }
+    if (count > 0) {
+      // Calculate average profitLossPercentage for the type
+      totalProfitLossPercentage /= count;
+    }
+
+    // Store the results for this type (both data and total)
+    result[type] = {
+      assets: assets, // List of assets
+      total: {
+        balance: roundToTwoDecimalPlaces(totalBalance),
+        profitLoss: roundToTwoDecimalPlaces(totalProfitLoss),
+        profitLossPercentage: roundToTwoDecimalPlaces(
+          totalProfitLossPercentage
+        ),
+      },
+    };
+  });
+
+  // Calculate the global total (across all asset types)
+  const globalProfitLossPercentage =
+    globalCount > 0 ? globalTotalProfitLossPercentage / globalCount : 0;
+
+  // Add the global total
+  result.total = {
+    balance: roundToTwoDecimalPlaces(globalTotalBalance),
+    profitLoss: roundToTwoDecimalPlaces(globalTotalProfitLoss),
+    profitLossPercentage: roundToTwoDecimalPlaces(globalProfitLossPercentage),
+  };
+
+  return result;
 }
+
+// Define the structure for the profit/loss data
+interface IInvestmentWithProfitLoss {
+  symbol: string;
+  type: AssetType;
+  avgPrice: number;
+  amount: number;
+  currentPrice: number;
+  profitLoss: number;
+  profitLossPercentage: number;
+}
+
+// Define a result object grouped by asset type
+interface IGroupedAssets {
+  crypto: any[];
+  usaStocks: any[];
+  trStocks: any[];
+  commodities: any[];
+  exchanges: any[];
+  funds: any[];
+}
+
+// Define a result object grouped by asset type
+interface IGroupedInvestments {
+  crypto: IInvestmentWithProfitLoss[];
+  usaStocks: IInvestmentWithProfitLoss[];
+  trStocks: IInvestmentWithProfitLoss[];
+  commodities: IInvestmentWithProfitLoss[];
+  exchanges: IInvestmentWithProfitLoss[];
+  funds: IInvestmentWithProfitLoss[];
+}
+
+const fetchCryptoPrices = async (
+  assets: IAsset[],
+  targetCurrency: Currency
+): Promise<IInvestmentWithProfitLoss[]> => {
+  const fromCurrency = assets[0].currency || Currency.USD;
+  const conversionRate = await getCurrencyConversionRate(
+    fromCurrency,
+    targetCurrency
+  );
+
+  const crypto = await priceProvider(Market.Crypto, "");
+
+  // Fiyat bilgilerini döndürelim
+  return assets.map((asset) => {
+    let { price, icon, name }: any = crypto.find(
+      (item) => item.ticker === asset.symbol
+    );
+
+    let currentPrice = parseFloat(price.replace(/,/g, ""));
+    const { avg_price, amount, type, symbol } = asset;
+
+    // Convert the current price and avg price to the target currency
+    currentPrice = roundToTwoDecimalPlaces(currentPrice * conversionRate);
+    const avgPrice = roundToTwoDecimalPlaces(avg_price * conversionRate);
+    return {
+      icon,
+      name,
+      symbol,
+      amount,
+      type,
+      currency: targetCurrency, // Change the currency to the target
+      currentPrice: roundToTwoDecimalPlaces(currentPrice),
+      avgPrice: roundToTwoDecimalPlaces(avgPrice),
+      profitLoss: roundToTwoDecimalPlaces((currentPrice - avgPrice) * amount),
+      profitLossPercentage: roundToTwoDecimalPlaces(
+        ((currentPrice - avgPrice) / avgPrice) * 100
+      ),
+    };
+  });
+};
+
+const fetchUsaStockPrices = async (
+  assets: IAsset[],
+  targetCurrency: Currency
+): Promise<IInvestmentWithProfitLoss[]> => {
+  const fromCurrency = assets[0].currency || Currency.USD;
+  const conversionRate = await getCurrencyConversionRate(
+    fromCurrency,
+    targetCurrency
+  );
+
+  const usaStocks = await fetchUsaStocks();
+
+  // Fiyat bilgilerini döndürelim
+  return assets.map((asset) => {
+    let { price, icon, name }: any = usaStocks.find(
+      (item) => item.ticker === asset.symbol
+    );
+
+    let currentPrice = parseFloat(price);
+    const { avg_price, amount, type, symbol } = asset;
+
+    // Convert the current price and avg price to the target currency
+    currentPrice = roundToTwoDecimalPlaces(currentPrice * conversionRate);
+    const avgPrice = roundToTwoDecimalPlaces(avg_price * conversionRate);
+    return {
+      icon,
+      name,
+      symbol,
+      amount,
+      type,
+      currency: targetCurrency, // Change the currency to the target
+      currentPrice: roundToTwoDecimalPlaces(currentPrice),
+      avgPrice: roundToTwoDecimalPlaces(avgPrice),
+      profitLoss: roundToTwoDecimalPlaces((currentPrice - avgPrice) * amount),
+      profitLossPercentage: roundToTwoDecimalPlaces(
+        ((currentPrice - avgPrice) / avgPrice) * 100
+      ),
+    };
+  });
+};
+
+const fetchTrStockPrices = async (
+  assets: IAsset[],
+  targetCurrency: Currency
+): Promise<IInvestmentWithProfitLoss[]> => {
+  const fromCurrency = assets[0].currency || Currency.TRY;
+  const conversionRate = await getCurrencyConversionRate(
+    fromCurrency,
+    targetCurrency
+  );
+
+  const trStocks = await priceProvider(Market.Bist100, "");
+
+  // Fiyat bilgilerini döndürelim
+  return assets.map((asset) => {
+    let { price, icon, name }: any = trStocks.find(
+      (item) => item.ticker === asset.symbol
+    );
+
+    let currentPrice = parseFloat(price);
+    const { avg_price, amount, type, symbol } = asset;
+
+    console.log({ conversionRate, avg_price });
+
+    // Convert the current price and avg price to the target currency
+    currentPrice = roundToTwoDecimalPlaces(currentPrice * conversionRate);
+    const avgPrice = roundToTwoDecimalPlaces(avg_price * conversionRate);
+    return {
+      icon,
+      name,
+      symbol,
+      amount,
+      type,
+      currency: targetCurrency, // Change the currency to the target
+      currentPrice: roundToTwoDecimalPlaces(currentPrice),
+      avgPrice: roundToTwoDecimalPlaces(avgPrice),
+      profitLoss: roundToTwoDecimalPlaces((currentPrice - avgPrice) * amount),
+      profitLossPercentage: roundToTwoDecimalPlaces(
+        ((currentPrice - avgPrice) / avgPrice) * 100
+      ),
+    };
+  });
+};
+
+const fetchCommodityPrices = async (
+  assets: IAsset[],
+  targetCurrency: Currency
+): Promise<IInvestmentWithProfitLoss[]> => {
+  const fromCurrency = assets[0].currency || Currency.TRY;
+  const conversionRate = await getCurrencyConversionRate(
+    fromCurrency,
+    targetCurrency
+  );
+
+  const commodities = await scrapeGoldPrices();
+
+  // Fiyat bilgilerini döndürelim
+  return assets.map((asset) => {
+    let { price, name }: any = commodities.find(
+      (item) => item.code === asset.symbol
+    );
+
+    let currentPrice = convertToNumber(price);
+    const { avg_price, amount, type, symbol } = asset;
+
+    // Convert the current price and avg price to the target currency
+    currentPrice = roundToTwoDecimalPlaces(currentPrice * conversionRate);
+    const avgPrice = roundToTwoDecimalPlaces(avg_price * conversionRate);
+    return {
+      name,
+      symbol,
+      amount,
+      type,
+      currency: targetCurrency, // Change the currency to the target
+      currentPrice: roundToTwoDecimalPlaces(currentPrice),
+      avgPrice: roundToTwoDecimalPlaces(avgPrice),
+      profitLoss: roundToTwoDecimalPlaces((currentPrice - avgPrice) * amount),
+      profitLossPercentage: roundToTwoDecimalPlaces(
+        ((currentPrice - avgPrice) / avgPrice) * 100
+      ),
+    };
+  });
+};

@@ -1,15 +1,15 @@
 import mongoose, { Document, Schema } from "mongoose";
 import { IAccount } from "./Account";
 import Transaction from "./Transaction";
-import { AssetType, Market } from "../utils/enums";
+import { AssetType, Currency } from "../utils/enums";
 
 export interface IAsset extends Document {
   symbol: string;
   account: IAccount;
+  currency: Currency;
   avg_price: number;
   amount: number;
   type: AssetType;
-  market: Market;
 }
 
 const AssetSchema: Schema<IAsset> = new Schema(
@@ -22,6 +22,11 @@ const AssetSchema: Schema<IAsset> = new Schema(
       type: mongoose.Schema.ObjectId,
       ref: "Account",
       required: true,
+    },
+    currency: {
+      type: String,
+      enum: [Currency.EUR, Currency.TRY, Currency.USD],
+      default: Currency.TRY,
     },
     avg_price: {
       type: Number,
@@ -39,17 +44,6 @@ const AssetSchema: Schema<IAsset> = new Schema(
         AssetType.Exchange,
         AssetType.Fund,
         AssetType.Stock,
-      ],
-      required: true,
-    },
-    market: {
-      type: String,
-      enum: [
-        Market.Bist100,
-        Market.Nasdaq,
-        Market.DownJones,
-        Market.Electronic,
-        Market.SP500,
       ],
       required: true,
     },
