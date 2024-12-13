@@ -13,6 +13,9 @@ import connectDB from "./config/db";
 // Connect to database
 connectDB();
 
+// job files
+import { startDailyJob, startScheduler } from "./utils/scheduler";
+
 // Route files
 import authRouter from "./routes/auth";
 import usersRouter from "./routes/users";
@@ -26,7 +29,7 @@ import stocksRouter from "./routes/stocks";
 import commoditiesRouter from "./routes/commodities";
 import cryptoRouter from "./routes/crypto";
 import scrapingRouter from "./routes/scraping";
-import { startDailyJob, startScheduler } from "./utils/scheduler";
+import historiesRouter from "./routes/histories";
 
 const app = express();
 
@@ -81,10 +84,12 @@ app.use("/api/v1/stocks", stocksRouter);
 app.use("/api/v1/commodities", commoditiesRouter);
 // kripto paralar için
 app.use("/api/v1/crypto", cryptoRouter);
-// for current user investments
+// investments
 app.use("/api/v1/investments", investmentsRouter);
 // scraping
 app.use("/api/v1/scraping", scrapingRouter);
+// histories
+app.use("/api/v1/histories", historiesRouter);
 
 // jobs
 startScheduler();
