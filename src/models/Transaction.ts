@@ -1,17 +1,19 @@
 import mongoose, { Document, Schema } from "mongoose";
-import Asset, { IAsset } from "./Asset";
+import Investment, { IInvestment } from "./Investment";
+import { TransactionType } from "../utils/enums";
 
 export interface ITransaction extends Document {
-  asset: IAsset;
+  investment: IInvestment;
   price: number;
   quantity: number;
+  type: TransactionType;
 }
 
 const TransactionSchema: Schema<ITransaction> = new Schema(
   {
-    asset: {
+    investment: {
       type: mongoose.Schema.ObjectId,
-      ref: "Asset",
+      ref: "Investment",
       required: true,
     },
     price: {
@@ -22,15 +24,20 @@ const TransactionSchema: Schema<ITransaction> = new Schema(
       type: Number,
       default: 0,
     },
+    type: {
+      type: Number,
+      enum: [TransactionType.Buy, TransactionType.Sell],
+      default: TransactionType.Buy,
+    },
   },
   { timestamps: true }
 );
 
 // Ortalamayı hesaplayacak fonksiyon
-const getAverageCost = async function (assetId: string) {
+const getAverageCost = async function (investmentId: string) {
   try {
     // Tüm işlemleri al
-    const transactions = await Transaction.find({ asset: assetId });
+    const transactions = await Transaction.find({ investment: investmentId });
 
     let totalAmount = 0;
     let totalQuantity = 0;
@@ -43,7 +50,7 @@ const getAverageCost = async function (assetId: string) {
     // Ortalama maliyeti hesapla
     const averageCost = totalAmount / totalQuantity;
 
-    await Asset.findByIdAndUpdate(assetId, {
+    await Investment.findByIdAndUpdate(investmentId, {
       avg_price: Number(averageCost.toFixed(2)), // En yakın 10'a yuvarlama
       amount: totalQuantity,
     });
@@ -56,7 +63,7 @@ const getAverageCost = async function (assetId: string) {
 
 // Call getAverageCost after save
 TransactionSchema.post("save", async function () {
-  getAverageCost(this.asset as any);
+  getAverageCost(this.investment as any);
 });
 
 // Call getAverageCost after save
@@ -64,7 +71,7 @@ TransactionSchema.pre("findOneAndUpdate", async function (next) {
   const transactionId = (this as any)._conditions._id;
   const transaction = await Transaction.findById(transactionId);
   if (!transaction) next();
-  getAverageCost(transaction?.asset as any);
+  getAverageCost(transaction?.investment as any);
 });
 
 // Call getAverageCost before remove

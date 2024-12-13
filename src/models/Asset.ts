@@ -1,49 +1,53 @@
 import mongoose, { Document, Schema } from "mongoose";
-import { IAccount } from "./Account";
-import Transaction from "./Transaction";
-import { AssetType, Currency } from "../utils/enums";
+import { AssetMarket, Currency } from "../utils/enums";
+import History from "./History";
 
 export interface IAsset extends Document {
-  symbol: string;
-  account: IAccount;
+  ticker: string;
+  market: AssetMarket;
+  price: number;
+  icon?: string;
+  name: string;
   currency: Currency;
-  avg_price: number;
-  amount: number;
-  type: AssetType;
+  scrapedAt: Date;
 }
 
 const AssetSchema: Schema<IAsset> = new Schema(
   {
-    symbol: {
+    ticker: {
       type: String,
-      required: [true, "Please add a symbol"],
+      required: [true, "Please add a ticker"],
     },
-    account: {
-      type: mongoose.Schema.ObjectId,
-      ref: "Account",
-      required: true,
+    icon: {
+      type: String,
+      default: "",
+    },
+    name: {
+      type: String,
+      required: [true, "Please add a name"],
     },
     currency: {
       type: String,
       enum: [Currency.EUR, Currency.TRY, Currency.USD],
       default: Currency.TRY,
     },
-    avg_price: {
+    price: {
       type: Number,
       default: 0,
     },
-    amount: {
-      type: Number,
-      default: 0,
+    scrapedAt: {
+      type: Date,
+      default: Date.now(),
     },
-    type: {
+    market: {
       type: String,
       enum: [
-        AssetType.Commodity,
-        AssetType.Crypto,
-        AssetType.Exchange,
-        AssetType.Fund,
-        AssetType.Stock,
+        AssetMarket.Commodity,
+        AssetMarket.Crypto,
+        AssetMarket.Exchange,
+        AssetMarket.Fund,
+        AssetMarket.TRStock,
+        AssetMarket.USAStock,
       ],
       required: true,
     },
@@ -51,24 +55,22 @@ const AssetSchema: Schema<IAsset> = new Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-// Cascade delete Assets when a Asset is deleted
+// Cascade delete Historys when a History is deleted
 AssetSchema.pre("findOneAndDelete", async function (next) {
   const assetId = (this as any)._conditions._id;
 
   // Access the document via 'this' when the middleware is set to { document: true, query: false }
-  console.log(
-    `Asset ${assetId} is being deleted. Deleting related transactions.`
-  );
+  console.log(`Asset ${assetId} is being deleted. Deleting related histories.`);
 
-  // Cascade delete Assets related to this Asset
-  await Transaction.deleteMany({ asset: assetId });
+  // Cascade delete Historys related to this History
+  await History.deleteMany({ asset: assetId });
 
   next(); // Proceed with the delete operation
 });
 
 // Reverse populate with virtuals
-AssetSchema.virtual("transactions", {
-  ref: "Transaction",
+AssetSchema.virtual("histories", {
+  ref: "History",
   localField: "_id",
   foreignField: "asset",
   justOne: false,

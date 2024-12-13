@@ -47,14 +47,19 @@ export async function scrapeGoldPrices() {
 
   // Scrape the gold prices
   const prices = await page.$$eval(".tBody ul", (uls) => {
-    return uls.map((ul: any) => {
-      const name =
-        ul.querySelector(".cell010 a")?.textContent.trim() ||
-        ul.querySelector(".cell010 b")?.textContent.trim(); // Extract name
-      const alis = ul.querySelectorAll(".cell009")[0]?.textContent.trim(); // Extract alış price
-      const satis = ul.querySelectorAll(".cell009")[1]?.textContent.trim(); // Extract satış price
-      return { name, alis, satis, price: satis };
-    });
+    return uls
+      .map((ul: any) => {
+        const name =
+          ul.querySelector(".cell010 a")?.textContent.trim() ||
+          ul.querySelector(".cell010 b")?.textContent.trim(); // Extract name
+        const alis = ul.querySelectorAll(".cell009")[0]?.textContent.trim(); // Extract alış price
+        const satis = ul.querySelectorAll(".cell009")[1]?.textContent.trim(); // Extract satış price
+        return { name, alis, satis, price: satis };
+      })
+      .filter(
+        (item) =>
+          item.price !== "" && item.price !== null && item.price !== undefined
+      ); // Filter out invalid 'price' values
   });
 
   // Close the browser

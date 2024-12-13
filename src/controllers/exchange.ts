@@ -50,27 +50,28 @@ export const getExchangeRates = asyncHandler(
 const url = "https://www.tcmb.gov.tr/kurlar/today.xml";
 
 // Döviz kuru verisini alıp JSON formatına dönüştüren fonksiyon
-
+// Fetch exchange rates for USD, EUR, and TRY
 export const fetchExchangeRates = async () => {
   const response = await axios.get(url);
 
-  // XML'i JSON'a dönüştürmek için xml2js kullan
+  // XML to JSON conversion
   const parser = new xml2js.Parser({ explicitArray: false });
   const result = await parser.parseStringPromise(response.data);
 
-  // Döviz kuru verilerini içeren bölüm
   const exchangeRates = result.Tarih_Date.Currency;
 
-  // USD/TRY kuru örneği
+  // Find specific currency exchange rates
   const usdRate = exchangeRates.find(
     (currency: any) => currency["$"].CurrencyCode === "USD"
   )?.BanknoteSelling;
   const eurRate = exchangeRates.find(
     (currency: any) => currency["$"].CurrencyCode === "EUR"
   )?.BanknoteSelling;
-  const usdToTry = Number(usdRate); // USD/TRY kuru
-  const eurToTry = Number(eurRate); // EUR/TRY kuru
 
+  const usdToTry = Number(usdRate); // USD/TRY rate
+  const eurToTry = Number(eurRate); // EUR/TRY rate
+
+  // Return exchange rates to and from TRY, USD, EUR
   return {
     try: usdToTry,
     eur: usdToTry / eurToTry,
@@ -83,25 +84,31 @@ export const fetchExchangeRates = async () => {
   };
 };
 
-// Define a function to get the conversion rate
+// Function to get the conversion rate between two currencies
 export const getCurrencyConversionRate = async (
   fromCurrency: Currency,
   toCurrency: Currency
 ): Promise<number> => {
-  // Here, you would replace this with your actual API URL and key
+  // Fetch the latest exchange rates
   const response = await fetchExchangeRates();
 
   let rate = 1;
+
+  // Conversion logic based on fromCurrency and toCurrency
   if (fromCurrency === Currency.TRY) {
-    rate = response.from[toCurrency];
+    rate = response.from[toCurrency]; // TRY to target currency
+  } else if (toCurrency === Currency.TRY) {
+    rate = 1 / response.from[fromCurrency]; // Convert to TRY if target is TRY
   } else {
-    rate = response[toCurrency];
+    rate = response[toCurrency] / response[fromCurrency]; // Any other pair
   }
 
-  if (!rate)
+  if (!rate) {
     throw new Error(
       `Conversion rate from ${fromCurrency} to ${toCurrency} not found.`
     );
+  }
+
   return rate;
 };
 

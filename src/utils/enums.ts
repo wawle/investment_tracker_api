@@ -13,10 +13,16 @@ export enum Market {
   Electronic = "electronic",
 }
 
-export enum AssetType {
-  Stock = "stock",
+export enum AssetMarket {
+  TRStock = "tr-stock",
+  USAStock = "usa-stock",
   Exchange = "exchange",
   Fund = "fund",
   Commodity = "commodity",
   Crypto = "crypto",
+}
+
+export enum TransactionType {
+  Sell,
+  Buy,
 }
