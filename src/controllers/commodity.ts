@@ -1,7 +1,7 @@
 import { Request, NextFunction } from "express";
 import asyncHandler from "../middleware/async";
 import puppeteer from "puppeteer";
-import { generateSlug } from "../utils";
+import { generateCode } from "../utils";
 
 // @desc      Get all commodities
 // @route     GET /api/v1/commodities
@@ -18,15 +18,9 @@ export const getCommodities = asyncHandler(
         )
       : commodities;
 
-    // Add slug to each item in the list
-    const updatedDataList = filteredCommodities.map((item) => ({
-      ...item,
-      code: generateSlug(item.name), // Add the slug field
-    }));
-
     res.status(200).json({
       success: true,
-      data: updatedDataList,
+      data: filteredCommodities,
     });
   }
 );
@@ -71,7 +65,7 @@ export async function scrapeGoldPrices() {
   // Add slug to each item in the list
   const updatedPrices = prices.map((item) => ({
     ...item,
-    code: generateSlug(item.name), // Add the slug field
+    code: generateCode(item.name), // Add the slug field
   }));
 
   return updatedPrices;

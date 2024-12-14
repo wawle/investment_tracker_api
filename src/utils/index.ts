@@ -1,14 +1,17 @@
 import constants from "./constants";
 
-// Function to generate a slug from a string
-export function generateSlug(name: string): string {
-  return name
-    .toLowerCase() // Convert to lowercase
-    .replace(/[^a-z0-9\s]/g, "") // Remove non-alphanumeric characters (except spaces)
-    .replace(/\s+/g, "-") // Replace spaces with hyphens
-    .trim(); // Remove any leading/trailing spaces
-}
+// Function to generate a code based on name
+export function generateCode(name: string): string {
+  // Remove non-alphanumeric characters (keeping spaces for word separation) and convert to lowercase
+  const cleanedName = name.replace(/[^a-zA-Z0-9\s]/g, "").toLowerCase();
 
+  // Split the name into words and take the first letter of each word
+  const words = cleanedName.split(/\s+/); // Split by spaces
+  const code = words.map((word) => word[0]).join("");
+
+  // Truncate to 3 characters and return uppercase
+  return code.slice(0, 3).toUpperCase();
+}
 export function convertToNumber(value: string): number {
   // Replace the thousands separator (".") and the decimal separator (",")
   const cleanedValue = value.replace(/\./g, "").replace(",", ".");
