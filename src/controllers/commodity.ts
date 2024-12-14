@@ -1,4 +1,4 @@
-import { Request, NextFunction } from "express";
+import { Request } from "express";
 import asyncHandler from "../middleware/async";
 import puppeteer from "puppeteer";
 import { generateCode } from "../utils";
@@ -7,7 +7,7 @@ import { generateCode } from "../utils";
 // @route     GET /api/v1/commodities
 // @access    Public
 export const getCommodities = asyncHandler(
-  async (req: Request, res: any, next: NextFunction): Promise<void> => {
+  async (req: Request, res: any): Promise<void> => {
     const { search } = req.query;
     const commodities = await scrapeGoldPrices();
 

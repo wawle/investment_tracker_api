@@ -51,7 +51,7 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
       case AssetMarket.Commodity:
         return {
           ticker: item.code, // Commodity'lerde ticker, code ile eşleştiriliyor
-          price: parsePrice(item.price.replace(",", ".")), // Fiyatı sayıya çeviriyoruz
+          price: parsePrice(item.price), // Fiyatı sayıya çeviriyoruz
           currency: Currency.TRY, // Komoditeler için genellikle TRY kullanılıyor
           icon: "", // Commodity'lerde icon olmayabilir
           name: item.name,
