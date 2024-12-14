@@ -1,6 +1,7 @@
 import { Request, NextFunction } from "express";
 import { Document, Model } from "mongoose";
 
+// `advancedResults` fonksiyonu TypeScript ile
 const advancedResults =
   (model: Model<Document>, populate?: string) =>
   async (req: Request, res: any, next: NextFunction): Promise<void> => {
@@ -36,41 +37,21 @@ const advancedResults =
       (match) => `$${match}`
     );
 
-    // Use aggregation to get custom sorting behavior
-    const aggregation: any[] = [{ $match: JSON.parse(queryStr) }];
+    // Finding resource
+    query = model.find(JSON.parse(queryStr));
 
     // Select Fields
     if (req.query.select) {
       const fields = (req.query.select as string).split(",").join(" ");
-      aggregation.push({ $project: { [fields]: 1 } });
+      query = query.select(fields);
     }
 
-    // Handle sorting by ticker, treating numeric tickers as strings
+    // Sort
     if (req.query.sort) {
       const sortBy = (req.query.sort as string).split(",").join(" ");
-
-      // Handle custom sorting where "ticker" is sorted with numbers at the end
-      if (sortBy.includes("ticker")) {
-        aggregation.push({
-          $addFields: {
-            tickerSort: {
-              $cond: {
-                // Check if ticker starts with a number (instead of checking the entire string)
-                if: { $regexMatch: { input: "$ticker", regex: "^[0-9]" } },
-                then: 1, // Treat numbers as larger than alphabetic
-                else: 0, // Non-numeric tickers come first
-              },
-            },
-          },
-        });
-
-        // Now sort by `tickerSort` first, then by ticker alphabetically
-        aggregation.push({ $sort: { tickerSort: 1, ticker: 1 } }); // First sort by 'tickerSort', then by 'ticker'
-      } else {
-        aggregation.push({ $sort: { [sortBy]: 1 } });
-      }
+      query = query.sort(sortBy);
     } else {
-      aggregation.push({ $sort: { createdAt: -1 } });
+      query = query.sort("-createdAt");
     }
 
     // Pagination
@@ -78,24 +59,16 @@ const advancedResults =
     const limit = parseInt(req.query.limit as string, 10) || 25;
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
-    const total = await model.countDocuments(JSON.parse(queryStr));
+    const total = await model.countDocuments(query);
 
-    aggregation.push({ $skip: startIndex });
-    aggregation.push({ $limit: limit });
+    query = query.skip(startIndex).limit(limit);
 
     if (populate) {
-      aggregation.push({
-        $lookup: {
-          from: populate,
-          localField: "_id",
-          foreignField: "modelId",
-          as: populate,
-        },
-      });
+      query = query.populate(populate);
     }
 
-    // Executing aggregation query
-    const results = await model.aggregate(aggregation);
+    // Executing query
+    const results = await query;
 
     // Pagination result
     const pagination: {
