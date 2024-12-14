@@ -91,6 +91,7 @@ async function fetchIsBankFunds(): Promise<FundData[]> {
   // Navigate to the URL
   await page.goto("https://www.isportfoy.com.tr/getiri-ve-fiyatlar", {
     waitUntil: "domcontentloaded",
+    timeout: 0,
   });
 
   // Wait for the table rows to load
@@ -139,6 +140,7 @@ async function fetchYapiKrediBankFunds(): Promise<FundData[]> {
   await page.goto(
     "https://www.yapikredi.com.tr/yatirimci-kosesi/fon-bilgileri",
     {
+      timeout: 0,
       waitUntil: "domcontentloaded",
     }
   );
@@ -189,6 +191,7 @@ async function fetchAkBankFunds(): Promise<FundData[]> {
   await page.goto(
     "https://www.akportfoy.com.tr/tr/fon/yatirim-fonlari/getiri",
     {
+      timeout: 0,
       waitUntil: "domcontentloaded",
     }
   );
@@ -247,6 +250,7 @@ async function getFundInfo(code: string): Promise<FundData> {
   });
   const page = await browser.newPage();
   await page.goto(`https://www.besfongetirileri.com/fon-karti/${code}`, {
+    timeout: 0,
     waitUntil: "domcontentloaded",
   });
 
@@ -292,7 +296,10 @@ async function fetchFundByTicker(ticker: string): Promise<FundData[]> {
   const page = await browser.newPage();
 
   // Navigate to the website
-  await page.goto(`https://www.yatirimdirekt.com/fon/fon_bulteni/${ticker}`);
+  await page.goto(`https://www.yatirimdirekt.com/fon/fon_bulteni/${ticker}`, {
+    timeout: 0,
+    waitUntil: "domcontentloaded",
+  });
 
   // Extract ticker and name using CSS selectors
   const data = await page.evaluate(() => {

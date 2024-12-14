@@ -40,7 +40,10 @@ export async function scrapeGoldPrices() {
   const page = await browser.newPage();
 
   // Navigate to the URL
-  await page.goto("https://bigpara.hurriyet.com.tr/altin/ata-altin-fiyati/");
+  await page.goto("https://bigpara.hurriyet.com.tr/altin/ata-altin-fiyati/", {
+    timeout: 0,
+    waitUntil: "domcontentloaded",
+  });
 
   // Wait for the page to load and the required elements to appear
   await page.waitForSelector(".tBody");

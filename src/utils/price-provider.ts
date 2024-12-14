@@ -11,7 +11,7 @@ export const priceProvider = async (market: string, search: string) => {
 
   if (!url) return [];
 
-  await page.goto(url, { waitUntil: "domcontentloaded" });
+  await page.goto(url, { timeout: 0, waitUntil: "domcontentloaded" });
 
   // Extract ticker names and prices from the table
   const data = await page.evaluate((search: string) => {
