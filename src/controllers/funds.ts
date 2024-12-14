@@ -1,7 +1,11 @@
 import puppeteer from "puppeteer";
 import asyncHandler from "../middleware/async";
 import { NextFunction, Request, Response } from "express";
+import ErrorResponse from "../utils/errorResponse";
 
+// @desc      Get all funds
+// @route     GET /api/v1/funds
+// @access    Public
 export const getFunds = asyncHandler(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     // Get the search query param (optional)
@@ -26,6 +30,28 @@ export const getFunds = asyncHandler(
   }
 );
 
+// @desc      Get single fund
+// @route     GET /api/v1/funds/:ticker
+// @access    Public
+export const getFundByTicker = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const fund = await fetchFundByTicker(req.params.ticker);
+    if (!fund) {
+      return next(
+        new ErrorResponse(
+          `fund not found with ticker of ${req.params.ticker}`,
+          404
+        )
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      data: fund,
+    });
+  }
+);
+
 interface FundData {
   fundName: string;
   fundCode: string;
@@ -34,20 +60,21 @@ interface FundData {
 
 export async function fetchFunds(): Promise<FundData[]> {
   // Fetch data from multiple sources using Promise.all
-  const [isbank, yapikredi, anadoluemeklilik]: FundData[][] = await Promise.all(
-    [
+  const [isbank, yapikredi, anadoluemeklilik, ydi]: FundData[][] =
+    await Promise.all([
       // fetchAkBankFunds(),
       fetchIsBankFunds(),
       fetchYapiKrediBankFunds(),
       fetchBesFunds(),
-    ]
-  );
+      fetchFundByTicker("YDI"),
+    ]);
 
   // Flatten the array of arrays into a single array of FundData
   const data: FundData[] = [
     ...isbank,
     ...yapikredi,
     ...anadoluemeklilik,
+    ...ydi,
   ].filter((item) => item.fundName && item.fundCode && item.price);
 
   return data;
@@ -254,4 +281,40 @@ async function getFundInfo(code: string): Promise<FundData> {
 
   // Return the extracted fund data
   return fundData;
+}
+
+async function fetchFundByTicker(ticker: string): Promise<FundData[]> {
+  // Launch Puppeteer browser instance
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+
+  // Navigate to the website
+  await page.goto(`https://www.yatirimdirekt.com/fon/fon_bulteni/${ticker}`);
+
+  // Extract ticker and name using CSS selectors
+  const data = await page.evaluate(() => {
+    // Get the name of the fund (long name)
+    const nameList = document
+      .querySelector("h2.osmanliTextColor")
+      ?.textContent?.trim()
+      .split(" - ");
+
+    // Get the price from the span with class 'change-value-span-2'
+    const priceList = document
+      .querySelector(".change-value-span-2 strong")
+      ?.textContent?.trim()
+      .split(" ");
+
+    return {
+      fundName: (nameList?.[1] || "")?.substring(0, 50),
+      fundCode: nameList?.[0] || "",
+      price: priceList?.[0]?.replace(".", ",") || "",
+    };
+  });
+
+  // Close the browser instance after scraping
+  await browser.close();
+
+  // Send the scraped data as a JSON response
+  return [data];
 }

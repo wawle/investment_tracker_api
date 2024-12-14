@@ -11,6 +11,12 @@ export enum Market {
   Bist100 = "bist100",
   SP500 = "sp500",
   Electronic = "electronic",
+  ETF = "etf",
+  USAFund = "usa-fund",
+  FinanceRental = "finance-rental",
+  TRTechnology = "tr-technology",
+  TRBankBroker = "tr-bank-broker",
+  TRFinance = "tr-finance",
 }
 
 export enum AssetMarket {

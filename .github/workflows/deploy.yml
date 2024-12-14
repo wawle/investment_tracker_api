@@ -27,19 +27,16 @@ jobs:
           SERVER: ${{ secrets.SERVER }}
           USER: ${{ secrets.USER }}
         run: |
-         if [ "$BRANCH" == "main" ]; then
-            ssh $USER@$SERVER "
-              cd /var/www/investment_tracker_api && \
-              git pull origin main && \
-              
-              # Build the Docker image (you can specify the exact tag)
-              docker build -t investment_tracker_api_prod:latest .
+          if [ "$BRANCH" == "main" ]; then
+             ssh $USER@$SERVER "
+               cd /var/www/investment_tracker_api && \
+               git pull origin main && \
+               
+               # Build the Docker image (you can specify the exact tag)
+               docker stop investment_tracker_api-api-1 investment_tracker_api-mongo-1
+               docker rm investment_tracker_api-api-1 investment_tracker_api-mongo-1
 
-              # Stop and remove the old container
-              docker stop investment_tracker_api_prod
-              docker rm investment_tracker_api_prod
-
-              # Run a new container with the latest image
-              docker run -d -p 4000:4000 --name investment_tracker_api_prod investment_tracker_api_prod:latest
-            "
-          fi
+               # Run a new container with the latest image
+               docker compase up --build
+             "
+           fi

@@ -1,10 +1,11 @@
 import Asset from "../models/Asset";
+import { getCountryFlag } from "../utils";
 import { AssetMarket, Currency, Market } from "../utils/enums";
 import { priceProvider } from "../utils/price-provider";
 import { scrapeGoldPrices } from "./commodity";
 import { fetchExchange } from "./exchange";
 import { fetchFunds } from "./funds";
-import { fetchUsaStocks } from "./stocks";
+import { fetchTRStocks, fetchUsaStocks } from "./stocks";
 
 // Helper function to parse the price
 const parsePrice = (price: string): number => {
@@ -50,7 +51,7 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
       case AssetMarket.Commodity:
         return {
           ticker: item.code, // Commodity'lerde ticker, code ile eşleştiriliyor
-          price: parseFloat(item.price.replace(",", ".")), // Fiyatı sayıya çeviriyoruz
+          price: parsePrice(item.price.replace(",", ".")), // Fiyatı sayıya çeviriyoruz
           currency: Currency.TRY, // Komoditeler için genellikle TRY kullanılıyor
           icon: "", // Commodity'lerde icon olmayabilir
           name: item.name,
@@ -62,7 +63,7 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
           ticker: item.code, // Dövizler için ticker, code ile eşleştiriliyor
           price: parseFloat(item.sell.replace(",", ".")), // Sell değeri price olarak alınacak
           currency: Currency.TRY, // Dolar/TL örneğinde TRY kullanılıyor
-          icon: "", // Exchange verisinde genellikle icon yok
+          icon: getCountryFlag(item.code), // Exchange verisinde genellikle icon yok
           name: item.name,
           market,
         };
@@ -110,7 +111,7 @@ export const fetchMarketData = async () => {
   const [usaStocks, trStocks, crypto, commodities, exchange, funds] =
     await Promise.all([
       fetchUsaStocks(), // USA borsası verisi
-      priceProvider(Market.Bist100, ""), // BIST100 verisi
+      fetchTRStocks(), // BIST100 verisi
       priceProvider(Market.Crypto, ""), // Kripto para verisi
       scrapeGoldPrices(), // Altın fiyatları
       fetchExchange(), // Dolar/TL gibi döviz kurları

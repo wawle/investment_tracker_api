@@ -68,6 +68,49 @@ export const fetchUsaStocks = async () => {
     Market.Electronic,
     Market.Nasdaq,
     Market.SP500,
+    Market.ETF,
+    Market.FinanceRental,
+    Market.USAFund,
+  ];
+
+  // Fetch data for all the resources
+  const responses = await Promise.all(
+    fetchResources.map((resource) => priceProvider(resource, ""))
+  );
+
+  // Flatten the responses into a single array
+  const data = responses.reduce((prev, curr) => [...prev, ...curr], []);
+  // Remove duplicates based on ticker value using a Set
+  const uniqueData = data.reduce(
+    (
+      accumulator: {
+        ticker: string;
+        price: string;
+        currency: string;
+        icon: string | null;
+        name: string;
+      }[],
+      current
+    ) => {
+      // Check if the ticker already exists in the accumulator
+      if (!accumulator.some((item: any) => item.ticker === current.ticker)) {
+        accumulator.push(current);
+      }
+      return accumulator;
+    },
+    []
+  );
+
+  return uniqueData;
+};
+
+export const fetchTRStocks = async () => {
+  // Get the search query param (optional)
+  const fetchResources = [
+    Market.Bist100,
+    Market.TRBankBroker,
+    Market.TRFinance,
+    Market.TRTechnology,
   ];
 
   // Fetch data for all the resources

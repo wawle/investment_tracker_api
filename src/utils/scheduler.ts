@@ -8,7 +8,7 @@ export const startScheduler = () => {
   cron.schedule("*/15 * * * *", async () => {
     console.log("Scraping started at", new Date().toLocaleString());
     await fetchMarketData();
-    console.log("Scraping done!");
+    console.log("Scraping done at", new Date().toLocaleString());
   });
 };
 
@@ -51,6 +51,10 @@ export const startDailyJob = () => {
         await history.save(); // History kaydını kaydet
         console.log(`Created new history for asset ${asset.ticker}`);
       })
+    );
+    console.log(
+      "Daily scraping and history creation done at",
+      new Date().toLocaleString()
     );
   });
 };

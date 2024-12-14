@@ -11,9 +11,12 @@ import { getCurrencyConversionRate } from "./exchange";
 interface IInvestmentWithProfitLoss {
   symbol: string;
   type: AssetMarket;
+  name: string;
+  icon?: string;
   avgPrice: number;
   amount: number;
   currentPrice: number;
+  balance: number;
   profitLoss: number;
   profitLossPercentage: number;
 }
@@ -87,9 +90,12 @@ const fetchInvestmentPrices = async (
     investmentDetails.push({
       symbol: asset.ticker,
       type: market,
+      icon: asset.icon,
+      name: asset.name,
       avgPrice: roundToTwoDecimalPlaces(convertedAvgPrice),
       amount,
       currentPrice: roundToTwoDecimalPlaces(convertedCurrentPrice),
+      balance: roundToTwoDecimalPlaces(balance),
       profitLoss: roundToTwoDecimalPlaces(profitLoss),
       profitLossPercentage: roundToTwoDecimalPlaces(profitLossPercentage),
     });
@@ -151,6 +157,12 @@ const groupInvestmentsByMarket = (
 
     // Calculate profit/loss percentage for the market
     const totalProfitLossPercentage = (totalProfitLoss / totalValue) * 100;
+    groupedInvestments[market].totalBalance = roundToTwoDecimalPlaces(
+      groupedInvestments[market].totalBalance
+    );
+    groupedInvestments[market].totalProfitLoss = roundToTwoDecimalPlaces(
+      groupedInvestments[market].totalProfitLoss
+    );
     groupedInvestments[market].totalProfitLossPercentage =
       roundToTwoDecimalPlaces(totalProfitLossPercentage);
   });
