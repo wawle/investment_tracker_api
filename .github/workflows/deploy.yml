@@ -37,6 +37,6 @@ jobs:
                docker rm investment_tracker_api-api-1 investment_tracker_api-mongo-1
 
                # Run a new container with the latest image
-               docker compase up --build
+               docker compose up --build
              "
            fi
