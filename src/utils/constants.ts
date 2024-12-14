@@ -53,12 +53,12 @@ export default {
     },
   ],
   asset_type_list: [
-    { name: "TR Hisse Senetleri", type: AssetMarket.TRStock },
-    { name: "USA Hisse Senetleri", type: AssetMarket.USAStock },
+    { name: "TR Hisseleri", type: AssetMarket.TRStock },
+    { name: "USA Hisseleri", type: AssetMarket.USAStock },
     { name: "Emtia", type: AssetMarket.Commodity },
     { name: "Döviz", type: AssetMarket.Exchange },
     { name: "Fonlar", type: AssetMarket.Fund },
-    { name: "Kripto", type: AssetMarket.Crypto },
+    { name: "Kripto paralar", type: AssetMarket.Crypto },
   ],
   countries: [
     {
