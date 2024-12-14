@@ -16,11 +16,8 @@ export const getStocks = asyncHandler(
 
     if (!market) return next(new ErrorResponse(`market params missing`, 400));
 
-    // Get the search query param (optional)
-    const search = req.query.search ? req.query.search.toString() : "";
-
     // Use fetchPriceData to get the data, passing the search term
-    const data = await priceProvider(market.market, search);
+    const data = await priceProvider(market.market);
 
     res.status(200).json({ success: true, data });
   }
@@ -31,11 +28,8 @@ export const getStocks = asyncHandler(
 // @access    Public
 export const getTrStocks = asyncHandler(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    // Get the search query param (optional)
-    const search = req.query.search ? req.query.search.toString() : "";
-
     // Use fetchPriceData to get the data, passing the search term
-    const data = await priceProvider(Market.Bist100, search);
+    const data = await priceProvider(Market.Bist100);
 
     res.status(200).json({ success: true, data });
   }
@@ -75,7 +69,7 @@ export const fetchUsaStocks = async () => {
 
   // Fetch data for all the resources
   const responses = await Promise.all(
-    fetchResources.map((resource) => priceProvider(resource, ""))
+    fetchResources.map((resource) => priceProvider(resource))
   );
 
   // Flatten the responses into a single array
@@ -116,7 +110,7 @@ export const fetchTRStocks = async () => {
 
   // Fetch data for all the resources
   const responses = await Promise.all(
-    fetchResources.map((resource) => priceProvider(resource, ""))
+    fetchResources.map((resource) => priceProvider(resource))
   );
 
   // Flatten the responses into a single array

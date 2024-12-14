@@ -27,7 +27,6 @@ import investmentsRouter from "./routes/investments";
 import fundsRouter from "./routes/funds";
 import stocksRouter from "./routes/stocks";
 import commoditiesRouter from "./routes/commodities";
-import cryptoRouter from "./routes/crypto";
 import scrapingRouter from "./routes/scraping";
 import historiesRouter from "./routes/histories";
 
@@ -82,8 +81,6 @@ app.use("/api/v1/funds", fundsRouter);
 app.use("/api/v1/stocks", stocksRouter);
 // altın ve gümüş için
 app.use("/api/v1/commodities", commoditiesRouter);
-// kripto paralar için
-app.use("/api/v1/crypto", cryptoRouter);
 // investments
 app.use("/api/v1/investments", investmentsRouter);
 // scraping

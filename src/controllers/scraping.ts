@@ -112,7 +112,7 @@ export const fetchMarketData = async () => {
     await Promise.all([
       fetchUsaStocks(), // USA borsası verisi
       fetchTRStocks(), // BIST100 verisi
-      priceProvider(Market.Crypto, ""), // Kripto para verisi
+      priceProvider(Market.Crypto), // Kripto para verisi
       scrapeGoldPrices(), // Altın fiyatları
       fetchExchange(), // Dolar/TL gibi döviz kurları
       fetchFunds(), // Fonlar verisi

@@ -1,7 +1,10 @@
 import constants from "./constants";
 import puppeteer from "puppeteer";
+import { Currency } from "./enums";
 
-export const priceProvider = async (market: string, search: string) => {
+export const priceProvider = async (market: string) => {
+  const allowedCurrencies = [Currency.TRY, Currency.USD];
+
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -69,69 +72,76 @@ export const priceProvider = async (market: string, search: string) => {
     }
 
     // Extract ticker names and prices from the table
-    const data = await page.evaluate((search: string) => {
-      // Find all rows in the table
-      const rows = document.querySelectorAll("tr"); // Adjust selector if needed
+    const data = await page.evaluate(
+      (allowedCurrencies: string[]) => {
+        // Find all rows in the table
+        const rows = document.querySelectorAll("tr"); // Adjust selector if needed
 
-      const result: {
-        ticker: string;
-        price: string;
-        currency: string;
-        icon: string | null;
-        name: string;
-      }[] = [];
+        const result: {
+          ticker: string;
+          price: string;
+          currency: string;
+          icon: string | null;
+          name: string;
+        }[] = [];
 
-      // Iterate over rows to get ticker and price
-      rows.forEach((row) => {
-        // Extract ticker symbol (assuming it's in the first column)
-        const tickerElement: any = row.querySelector(".tickerNameBox-GrtoTeat");
-        const tickerName = tickerElement
-          ? tickerElement.innerText.trim()
-          : null;
-
-        // If a ticker name exists, filter it based on the search query
-        if (
-          tickerName &&
-          (!search || tickerName.toLowerCase().includes(search.toLowerCase()))
-        ) {
-          const tickerDescriptionElement: any = row.querySelector(
-            ".tickerDescription-GrtoTeat"
+        // Iterate over rows to get ticker and price
+        rows.forEach((row) => {
+          // Extract ticker symbol (assuming it's in the first column)
+          const tickerElement: any = row.querySelector(
+            ".tickerNameBox-GrtoTeat"
           );
-          const tickerDescription = tickerDescriptionElement
-            ? tickerDescriptionElement.innerText.trim()
+          const tickerName = tickerElement
+            ? tickerElement.innerText.trim()
             : null;
 
-          // Extract SVG icon or image
-          const iconElement = row.querySelector(".tickerLogo-GrtoTeat");
-          const iconSrc = iconElement
-            ? (iconElement as HTMLImageElement).src
-            : null; // Get the image src if it's an image, or you can extract SVG directly
+          // If a ticker name exists, continue processing
+          if (tickerName) {
+            const tickerDescriptionElement: any = row.querySelector(
+              ".tickerDescription-GrtoTeat"
+            );
+            const tickerDescription = tickerDescriptionElement
+              ? tickerDescriptionElement.innerText.trim()
+              : null;
 
-          // Extract the price from the column specified by priceIndex
-          const priceCell: any = row.querySelectorAll("td")[2]; // Access the specified column by index
-          if (priceCell) {
-            const priceText = priceCell.innerText.trim();
+            // Extract SVG icon or image
+            const iconElement = row.querySelector(".tickerLogo-GrtoTeat");
+            const iconSrc = iconElement
+              ? (iconElement as HTMLImageElement).src
+              : null; // Get the image src if it's an image, or you can extract SVG directly
 
-            // If both ticker name and price exist, push them into the result array
-            if (priceText) {
-              const [price, currency] = priceText.split(" ");
-              result.push({
-                ticker: tickerName,
-                price: price,
-                currency: currency,
-                icon: iconSrc,
-                name: tickerDescription,
-              });
+            // Extract the price from the column specified by priceIndex
+            const priceCell: any = row.querySelectorAll("td")[2]; // Access the specified column by index
+            if (priceCell) {
+              const priceText = priceCell.innerText.trim();
+
+              // If both ticker name and price exist, push them into the result array
+              if (priceText) {
+                const [price, currency] = priceText.split(" ");
+                // Check if the currency is in the allowed currencies list
+                if (
+                  allowedCurrencies.includes(currency.toLowerCase() as Currency)
+                ) {
+                  result.push({
+                    ticker: tickerName,
+                    price: price,
+                    currency: currency,
+                    icon: iconSrc,
+                    name: tickerDescription,
+                  });
+                }
+              }
             }
           }
-        }
-      });
+        });
 
-      // Remove duplicates
-      return Array.from(
-        new Map(result.map((item) => [item.ticker, item])).values()
-      );
-    }, search); // Pass the search parameter to page.evaluate()
+        // Remove duplicates by ticker
+        return Array.from(
+          new Map(result.map((item) => [item.ticker, item])).values()
+        );
+      },
+      allowedCurrencies.map((c) => c.toLowerCase())
+    ); // Pass allowed currencies
 
     return data;
   } catch (error) {
