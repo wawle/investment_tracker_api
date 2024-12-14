@@ -8,7 +8,8 @@ import ErrorResponse from "../utils/errorResponse";
 import { getCurrencyConversionRate } from "./exchange";
 
 // Define the structure for the profit/loss data
-interface IInvestmentWithProfitLoss {
+export interface IInvestmentWithProfitLoss {
+  assetId: string;
   symbol: string;
   type: AssetMarket;
   name: string;
@@ -88,6 +89,7 @@ const fetchInvestmentPrices = async (
 
     // Prepare the result for this investment
     investmentDetails.push({
+      assetId: asset.id,
       symbol: asset.ticker,
       type: market,
       icon: asset.icon,
