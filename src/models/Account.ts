@@ -3,6 +3,7 @@ import { IUser } from "./User";
 import Asset from "./Asset";
 
 export interface IAccount extends Document {
+  _id: string;
   name: string;
   user: IUser;
 }

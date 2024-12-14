@@ -3,6 +3,7 @@ import Investment, { IInvestment } from "./Investment";
 import { TransactionType } from "../utils/enums";
 
 export interface ITransaction extends Document {
+  _id: string;
   investment: IInvestment;
   price: number;
   quantity: number;

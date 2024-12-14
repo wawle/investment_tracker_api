@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from "mongoose";
 import { IAsset } from "./Asset";
 
 export interface IHistory extends Document {
+  _id: string;
   asset: IAsset;
   close_price: number;
 }

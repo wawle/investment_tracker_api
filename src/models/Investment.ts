@@ -4,6 +4,7 @@ import Transaction from "./Transaction";
 import { IAsset } from "./Asset";
 
 export interface IInvestment extends Document {
+  _id: string;
   asset: IAsset;
   account: IAccount;
   avg_price: number;

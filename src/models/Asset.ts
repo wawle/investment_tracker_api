@@ -3,6 +3,7 @@ import { AssetMarket, Currency } from "../utils/enums";
 import History from "./History";
 
 export interface IAsset extends Document {
+  _id: string;
   ticker: string;
   market: AssetMarket;
   price: number;
