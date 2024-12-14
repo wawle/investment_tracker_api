@@ -38,6 +38,6 @@ jobs:
                docker rmi investment_tracker_api-api:latest mongo:latest
 
                # Run a new container with the latest image
-               docker compose up --build
+               docker compose up --build -d
              "
            fi
