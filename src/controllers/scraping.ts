@@ -1,5 +1,5 @@
 import Asset from "../models/Asset";
-import { getCountryFlag } from "../utils";
+import { generateCode, getCountryFlag } from "../utils";
 import { AssetMarket, Currency, Market } from "../utils/enums";
 import { priceProvider } from "../utils/price-provider";
 import { scrapeGoldPrices } from "./commodity";
@@ -70,7 +70,7 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
 
       case AssetMarket.Fund:
         return {
-          ticker: item.fundCode, // Fonlarda ticker, fundCode ile eşleştiriliyor
+          ticker: item.fundCode.replace("(", ""), // Fonlarda ticker, fundCode ile eşleştiriliyor
           price: parseFloat(item.price.replace(",", ".")), // Fiyatı sayıya çeviriyoruz
           currency: Currency.TRY, // Fonlar için genellikle TRY kullanılıyor
           icon: "", // Fonlarda genellikle icon yok

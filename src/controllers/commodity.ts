@@ -51,7 +51,7 @@ export async function scrapeGoldPrices() {
           ul.querySelector(".cell010 b")?.textContent.trim(); // Extract name
         const alis = ul.querySelectorAll(".cell009")[0]?.textContent.trim(); // Extract alış price
         const satis = ul.querySelectorAll(".cell009")[1]?.textContent.trim(); // Extract satış price
-        return { name, alis, satis, price: satis };
+        return { name, alis, satis, price: satis, code: generateCode(name) };
       })
       .filter(
         (item) =>
@@ -62,11 +62,5 @@ export async function scrapeGoldPrices() {
   // Close the browser
   await browser.close();
 
-  // Add slug to each item in the list
-  const updatedPrices = prices.map((item) => ({
-    ...item,
-    code: generateCode(item.name), // Add the slug field
-  }));
-
-  return updatedPrices;
+  return prices;
 }
