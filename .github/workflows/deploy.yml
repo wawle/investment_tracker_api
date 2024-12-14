@@ -35,6 +35,7 @@ jobs:
                # Build the Docker image (you can specify the exact tag)
                docker stop investment_tracker_api-api-1 investment_tracker_api-mongo-1
                docker rm investment_tracker_api-api-1 investment_tracker_api-mongo-1
+               docker rmi investment_tracker_api-api:latest mongo:latest
 
                # Run a new container with the latest image
                docker compose up --build -d
