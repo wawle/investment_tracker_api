@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, NextFunction } from "express";
 import { Document, Model } from "mongoose";
 
 // `advancedResults` fonksiyonu TypeScript ile
@@ -15,6 +15,18 @@ const advancedResults =
 
     // Loop over removeFields and delete them from reqQuery
     removeFields.forEach((param) => delete reqQuery[param]);
+
+    // Handle 'like' operator in the query
+    Object.keys(reqQuery).forEach((key) => {
+      if (
+        reqQuery[key] &&
+        typeof reqQuery[key] === "object" &&
+        (reqQuery[key] as any)?.like
+      ) {
+        const value = (reqQuery[key] as any)?.like; // Get the value of 'like' (e.g., 'aap')
+        reqQuery[key] = { $regex: value, $options: "i" }; // Apply a regex search
+      }
+    });
 
     // Create query string
     let queryStr = JSON.stringify(reqQuery);

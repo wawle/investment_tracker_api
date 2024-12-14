@@ -111,6 +111,7 @@ export const fetchTRStocks = async () => {
     Market.TRBankBroker,
     Market.TRFinance,
     Market.TRTechnology,
+    Market.TRTum100,
   ];
 
   // Fetch data for all the resources

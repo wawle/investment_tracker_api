@@ -17,6 +17,7 @@ export enum Market {
   TRTechnology = "tr-technology",
   TRBankBroker = "tr-bank-broker",
   TRFinance = "tr-finance",
+  TRTum100 = "tr-tum-100",
 }
 
 export enum AssetMarket {

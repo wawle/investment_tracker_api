@@ -1,5 +1,5 @@
 import Asset from "../models/Asset";
-import { generateCode, getCountryFlag } from "../utils";
+import { getCountryFlag } from "../utils";
 import { AssetMarket, Currency, Market } from "../utils/enums";
 import { priceProvider } from "../utils/price-provider";
 import { scrapeGoldPrices } from "./commodity";

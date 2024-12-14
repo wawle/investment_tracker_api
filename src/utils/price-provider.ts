@@ -5,74 +5,139 @@ export const priceProvider = async (market: string, search: string) => {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  }); // Tarayıcıyı başlat
-  const page = await browser.newPage(); // Yeni bir sayfa oluştur
-  const url = constants.market_list.find((item) => item.market === market)?.url;
+  }); // Launch browser
 
-  if (!url) return [];
+  try {
+    const page = await browser.newPage(); // Create new page
+    const url = constants.market_list.find(
+      (item) => item.market === market
+    )?.url;
 
-  await page.goto(url, { timeout: 0, waitUntil: "domcontentloaded" });
+    if (!url) return [];
 
-  // Extract ticker names and prices from the table
-  const data = await page.evaluate((search: string) => {
-    // Find all rows in the table
-    const rows = document.querySelectorAll("tr"); // Adjust selector if needed
+    await page.goto(url, { timeout: 0, waitUntil: "networkidle0" });
 
-    const result: {
-      ticker: string;
-      price: string;
-      currency: string;
-      icon: string | null;
-      name: string;
-    }[] = [];
+    // Helper function to create a delay
+    const delay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
 
-    // Iterate over rows to get ticker and price
-    rows.forEach((row) => {
-      // Extract ticker symbol (assuming it's in the first column)
-      const tickerElement: any = row.querySelector(".tickerNameBox-GrtoTeat");
-      const tickerName = tickerElement ? tickerElement.innerText.trim() : null;
+    // Function to load more data dynamically
+    async function loadMoreData() {
+      const loadMoreButton = await page.$(
+        "button span.content-D4RPB3ZC" // Adjust the selector to target the text container
+      );
 
-      // If a ticker name exists, filter it based on the search query
-      if (
-        tickerName &&
-        (!search || tickerName.toLowerCase().includes(search.toLowerCase()))
-      ) {
-        const tickerDescriptionElement: any = row.querySelector(
-          ".tickerDescription-GrtoTeat"
+      if (loadMoreButton) {
+        const buttonText = await page.evaluate(
+          (button) => button.innerText.trim(),
+          loadMoreButton
         );
-        const tickerDescription = tickerDescriptionElement
-          ? tickerDescriptionElement.innerText.trim()
-          : null;
 
-        // Extract SVG icon or image
-        const iconElement = row.querySelector(".tickerLogo-GrtoTeat");
-        const iconSrc = iconElement
-          ? (iconElement as HTMLImageElement).src
-          : null; // Get the image src if it's an image, or you can extract SVG directly
+        if (buttonText === "Load More") {
+          console.log("Load more button found. Clicking...");
+          await loadMoreButton.click();
 
-        // Extract the price from the column specified by priceIndex
-        const priceCell: any = row.querySelectorAll("td")[2]; // Access the specified column by index
-        if (priceCell) {
-          const priceText = priceCell.innerText.trim();
+          // Wait for new data to load using page.waitForFunction
+          await page.waitForFunction(
+            () => {
+              const currentRows = document.querySelectorAll("tr").length;
+              return currentRows > 0; // Adjust this condition as needed
+            },
+            { timeout: 5000 }
+          );
 
-          // If both ticker name and price exist, push them into the result array
-          if (priceText) {
-            const [price, currency] = priceText.split(" ");
-            result.push({
-              ticker: tickerName,
-              price: price,
-              currency: currency,
-              icon: iconSrc,
-              name: tickerDescription,
-            });
-          }
+          // Additional small delay
+          await delay(1000);
+
+          // Check if there are more items to load
+          return (await page.$("button span.content-D4RPB3ZC")) !== null;
         }
       }
-    });
 
-    return result;
-  }, search); // Pass the search parameter to page.evaluate()
+      return false;
+    }
 
-  await browser.close(); // Tarayıcıyı kapat
-  return data;
+    // Continuously load more data
+    let hasMoreData = true;
+    let iterationCount = 0;
+    const MAX_ITERATIONS = 10; // Prevent potential infinite loops
+
+    while (hasMoreData && iterationCount < MAX_ITERATIONS) {
+      // Try to load more data
+      hasMoreData = await loadMoreData();
+      iterationCount++;
+    }
+
+    // Extract ticker names and prices from the table
+    const data = await page.evaluate((search: string) => {
+      // Find all rows in the table
+      const rows = document.querySelectorAll("tr"); // Adjust selector if needed
+
+      const result: {
+        ticker: string;
+        price: string;
+        currency: string;
+        icon: string | null;
+        name: string;
+      }[] = [];
+
+      // Iterate over rows to get ticker and price
+      rows.forEach((row) => {
+        // Extract ticker symbol (assuming it's in the first column)
+        const tickerElement: any = row.querySelector(".tickerNameBox-GrtoTeat");
+        const tickerName = tickerElement
+          ? tickerElement.innerText.trim()
+          : null;
+
+        // If a ticker name exists, filter it based on the search query
+        if (
+          tickerName &&
+          (!search || tickerName.toLowerCase().includes(search.toLowerCase()))
+        ) {
+          const tickerDescriptionElement: any = row.querySelector(
+            ".tickerDescription-GrtoTeat"
+          );
+          const tickerDescription = tickerDescriptionElement
+            ? tickerDescriptionElement.innerText.trim()
+            : null;
+
+          // Extract SVG icon or image
+          const iconElement = row.querySelector(".tickerLogo-GrtoTeat");
+          const iconSrc = iconElement
+            ? (iconElement as HTMLImageElement).src
+            : null; // Get the image src if it's an image, or you can extract SVG directly
+
+          // Extract the price from the column specified by priceIndex
+          const priceCell: any = row.querySelectorAll("td")[2]; // Access the specified column by index
+          if (priceCell) {
+            const priceText = priceCell.innerText.trim();
+
+            // If both ticker name and price exist, push them into the result array
+            if (priceText) {
+              const [price, currency] = priceText.split(" ");
+              result.push({
+                ticker: tickerName,
+                price: price,
+                currency: currency,
+                icon: iconSrc,
+                name: tickerDescription,
+              });
+            }
+          }
+        }
+      });
+
+      // Remove duplicates
+      return Array.from(
+        new Map(result.map((item) => [item.ticker, item])).values()
+      );
+    }, search); // Pass the search parameter to page.evaluate()
+
+    return data;
+  } catch (error) {
+    console.error("Error in priceProvider:", error);
+    return [];
+  } finally {
+    await browser.close(); // Always close the browser
+  }
 };

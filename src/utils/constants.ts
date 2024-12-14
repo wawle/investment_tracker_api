@@ -51,6 +51,10 @@ export default {
       url: "https://www.tradingview.com/markets/stocks-turkey/sectorandindustry-sector/finance",
       market: Market.TRFinance,
     },
+    {
+      url: "https://tr.tradingview.com/symbols/BIST-XTUMY/components",
+      market: Market.TRTum100,
+    },
   ],
   asset_type_list: [
     { name: "TR Hisseleri", type: AssetMarket.TRStock },
