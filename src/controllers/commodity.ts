@@ -1,7 +1,7 @@
 import { Request } from "express";
 import asyncHandler from "../middleware/async";
 import puppeteer from "puppeteer";
-import { generateCode } from "../utils";
+import { generateCode, parsePrice } from "../utils";
 
 // @desc      Get all commodities
 // @route     GET /api/v1/commodities
@@ -12,7 +12,7 @@ export const getCommodities = asyncHandler(
     const commodities = await scrapeGoldPrices();
 
     // If there is a search term, filter the results
-    const filteredCommodities = search
+    let filteredCommodities = search
       ? commodities.filter((item: any) =>
           item.name.toLowerCase().includes((search as string).toLowerCase())
         )
@@ -51,22 +51,36 @@ export async function scrapeGoldPrices() {
           ul.querySelector(".cell010 b")?.textContent.trim(); // Extract name
         const alis = ul.querySelectorAll(".cell009")[0]?.textContent.trim(); // Extract alış price
         const satis = ul.querySelectorAll(".cell009")[1]?.textContent.trim(); // Extract satış price
-        return { name, alis, satis, price: satis };
+        const convertedPrice = parseFloat(
+          satis.replace(".", "").replace(",", ".")
+        );
+        return { name, alis, satis, price: convertedPrice };
       })
-      .filter(
-        (item) =>
-          item.price !== "" && item.price !== null && item.price !== undefined
-      ); // Filter out invalid 'price' values
+      .filter((item) => item.price !== null && item.price !== undefined); // Filter out invalid 'price' values
   });
 
   // Close the browser
   await browser.close();
 
-  // Add slug to each item in the list
-  const updatedPrices = prices.map((item) => ({
-    ...item,
-    code: generateCode(item.name), // Add the slug field
-  }));
+  // Track already generated codes
+  const generatedCodes = new Set<string>();
 
+  // Add unique code to each item
+  const updatedPrices = prices.map((item, index) => {
+    let code = generateCode(item.name); // Generate base code
+
+    // Ensure code is unique by appending a number if it already exists
+    let uniqueCode = code;
+    let counter = 1;
+    while (generatedCodes.has(uniqueCode)) {
+      uniqueCode = `${code}${counter}`; // Append a number to the base code
+      counter++;
+    }
+
+    // Add the unique code to the set and the item
+    generatedCodes.add(uniqueCode);
+
+    return { ...item, code: uniqueCode };
+  });
   return updatedPrices;
 }

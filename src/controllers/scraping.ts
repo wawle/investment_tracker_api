@@ -1,18 +1,11 @@
 import Asset from "../models/Asset";
-import { getCountryFlag } from "../utils";
+import { getCountryFlag, parsePrice } from "../utils";
 import { AssetMarket, Currency, Market } from "../utils/enums";
 import { priceProvider } from "../utils/price-provider";
 import { scrapeGoldPrices } from "./commodity";
 import { fetchExchange } from "./exchange";
 import { fetchFunds } from "./funds";
 import { fetchTRStocks, fetchUsaStocks } from "./stocks";
-
-// Helper function to parse the price
-const parsePrice = (price: string): number => {
-  // Remove all commas before converting to a number
-  const sanitizedPrice = price.replace(/,/g, ""); // Remove all commas
-  return parseFloat(sanitizedPrice); // Convert to float
-};
 
 // Her market türü için verileri eşleştiren fonksiyon
 const mapDataToAsset = (data: any[], market: AssetMarket) => {
@@ -51,7 +44,7 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
       case AssetMarket.Commodity:
         return {
           ticker: item.code, // Commodity'lerde ticker, code ile eşleştiriliyor
-          price: parsePrice(item.price), // Fiyatı sayıya çeviriyoruz
+          price: item.price, // Fiyatı sayıya çeviriyoruz
           currency: Currency.TRY, // Komoditeler için genellikle TRY kullanılıyor
           icon: "", // Commodity'lerde icon olmayabilir
           name: item.name,

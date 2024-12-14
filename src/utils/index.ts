@@ -10,7 +10,7 @@ export function generateCode(name: string): string {
   const code = words.map((word) => word[0]).join("");
 
   // Truncate to 3 characters and return uppercase
-  return code.slice(0, 3).toUpperCase();
+  return code.slice(0, 4).toUpperCase();
 }
 export function convertToNumber(value: string): number {
   // Replace the thousands separator (".") and the decimal separator (",")
@@ -47,4 +47,11 @@ export const getCountryFlag = (currency: string) => {
   );
   if (!country) return "";
   return country.flag;
+};
+
+// Helper function to parse the price
+export const parsePrice = (price: string): number => {
+  // Remove all commas before converting to a number
+  const sanitizedPrice = price.replace(/,/g, ""); // Remove all commas
+  return parseFloat(sanitizedPrice); // Convert to float
 };
