@@ -9,6 +9,14 @@ services:
       - mongo
     networks:
       - mynetwork
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0" # 2 CPUs
+          memory: 8G # 4 GB RAM
+        reservations:
+          cpus: "2.0" # Reserve 1 CPU
+          memory: 4G # Reserve 2 GB RAM
 
   mongo:
     image: mongo:latest
@@ -16,11 +24,11 @@ services:
       - mongo_data:/data/db
     networks:
       - mynetwork
-    healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5" # 0.5 CPU
+          memory: 1G # 1 GB RAM
 
 networks:
   mynetwork:
