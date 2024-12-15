@@ -67,7 +67,13 @@ export async function fetchFunds(): Promise<FundData[]> {
       fetchIsBankFunds(),
       fetchYapiKrediBankFunds(),
       fetchBesFunds(),
-      fetchFundByTicker("YDI"),
+      fetchFundByTicker("https://www.yatirimdirekt.com/fon/fon_bulteni/YDI"),
+      fetchFundByTicker(
+        "https://www.yatirimdirekt.com/bes/bes_fon_bulteni/AET"
+      ),
+      fetchFundByTicker(
+        "https://www.yatirimdirekt.com/bes/bes_fon_bulteni/BGL"
+      ),
     ]);
 
   // Flatten the array of arrays into a single array of FundData
@@ -294,7 +300,7 @@ async function getFundInfo(code: string): Promise<FundData> {
   return fundData;
 }
 
-async function fetchFundByTicker(ticker: string): Promise<FundData[]> {
+async function fetchFundByTicker(url: string): Promise<FundData[]> {
   // Launch Puppeteer browser instance
   const browser = await puppeteer.launch({
     headless: true,
@@ -303,7 +309,7 @@ async function fetchFundByTicker(ticker: string): Promise<FundData[]> {
   const page = await browser.newPage();
 
   // Navigate to the website
-  await page.goto(`https://www.yatirimdirekt.com/fon/fon_bulteni/${ticker}`, {
+  await page.goto(url, {
     timeout: 0,
     waitUntil: "domcontentloaded",
   });
