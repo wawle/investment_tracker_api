@@ -3,6 +3,7 @@ import asyncHandler from "../middleware/async";
 import ErrorResponse from "../utils/errorResponse";
 import Asset from "../models/Asset";
 import constants from "../utils/constants";
+import { AssetMarket } from "../utils/enums";
 
 // @desc      Get all assets
 // @route     GET /api/v1/assets
@@ -108,8 +109,22 @@ export const getAssetTypes = asyncHandler(
 export const getTrendAssets = asyncHandler(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     // List of tickers for which we want to fetch trend data
-    const assetTickers = ["USD", "EUR", "SPX", "IXIC", "XU100", "BTC", "ETH"];
-    const trendAssets = await Asset.find({ ticker: { $in: assetTickers } });
+    const assetTickers = [
+      { market: AssetMarket.Exchange, ticker: "USD" },
+      { market: AssetMarket.Exchange, ticker: "EUR" },
+      { market: AssetMarket.Indicies, ticker: "SPX" },
+      { market: AssetMarket.Indicies, ticker: "IXIC" },
+      { market: AssetMarket.Indicies, ticker: "XU100" },
+      { market: AssetMarket.Crypto, ticker: "BTC" },
+      { market: AssetMarket.Crypto, ticker: "ETH" },
+    ];
+    // Fetch assets by both ticker and market
+    const trendAssets = await Asset.find({
+      $or: assetTickers.map((asset) => ({
+        ticker: asset.ticker,
+        market: asset.market,
+      })),
+    });
 
     // If no assets are found, send a response with an empty data array
     if (!trendAssets || trendAssets.length === 0) {
