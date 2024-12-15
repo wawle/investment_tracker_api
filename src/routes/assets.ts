@@ -6,6 +6,7 @@ import {
   updateAsset,
   deleteAsset,
   getAssetTypes,
+  getTrendAssets,
 } from "../controllers/assets";
 import advancedResults from "../middleware/advancedResults";
 import Asset from "../models/Asset";
@@ -19,6 +20,7 @@ router
   .post(createAsset);
 
 router.route("/types").get(getAssetTypes);
+router.route("/trends").get(getTrendAssets);
 
 // Get single Asset, update Asset, delete Asset
 router.route("/:id").get(getAsset).put(updateAsset).delete(deleteAsset);

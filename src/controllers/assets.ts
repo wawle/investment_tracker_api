@@ -101,3 +101,28 @@ export const getAssetTypes = asyncHandler(
     });
   }
 );
+
+// @desc      Get trend assets
+// @route     GET /api/v1/assets/trends
+// @access    Public
+export const getTrendAssets = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // List of tickers for which we want to fetch trend data
+    const assetTickers = ["USD", "EUR", "SPX", "IXIC", "XU100", "BTC", "ETH"];
+    const trendAssets = await Asset.find({ ticker: { $in: assetTickers } });
+
+    // If no assets are found, send a response with an empty data array
+    if (!trendAssets || trendAssets.length === 0) {
+      res.status(404).json({
+        success: false,
+        message: "No trend assets found.",
+      });
+    }
+
+    // Return the fetched assets (you can customize this to return specific trend data)
+    res.status(200).json({
+      success: true,
+      data: trendAssets,
+    });
+  }
+);

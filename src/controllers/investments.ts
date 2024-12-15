@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import Asset, { IAsset } from "../models/Asset";
 import { AssetMarket, Currency } from "../utils/enums";
 import { roundToTwoDecimalPlaces } from "../utils";
-import Investment, { IInvestment } from "../models/Investment";
+import Investment from "../models/Investment";
 import ErrorResponse from "../utils/errorResponse";
 import History from "../models/History";
 
