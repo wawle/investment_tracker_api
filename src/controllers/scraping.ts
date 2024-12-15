@@ -7,7 +7,6 @@ import { fetchExchange } from "./exchange";
 import { fetchFunds } from "./funds";
 import { fetchIndices } from "./indicies";
 import { fetchTRStocks, fetchUsaStocks } from "./stocks";
-import { fetchConversionRatesForAssets } from "./investments";
 
 // Her market türü için verileri eşleştiren fonksiyon
 const mapDataToAsset = (data: any[], market: AssetMarket) => {
@@ -41,48 +40,6 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
   });
 };
 
-// Asset'leri güncelleme fonksiyonu
-// Function to update asset prices for all currencies
-/**
- * Convert USD and EUR to TRY and the reverse (TRY to USD and TRY to EUR).
- * @param usdValue - Amount in USD
- * @param eurValue - Amount in EUR
- * @param usdRate - Conversion rate from USD to TRY
- * @param eurRate - Conversion rate from EUR to TRY
- * @returns - An object with conversion results
- */
-function convertCurrency(
-  usdValue: number,
-  eurValue: number,
-  usdRate: number,
-  eurRate: number
-) {
-  // Convert USD to TRY
-  const usdToTry = usdValue * usdRate;
-
-  // Convert EUR to TRY
-  const eurToTry = eurValue * eurRate;
-
-  // Convert TRY to USD (inverse of USD to TRY rate)
-  const tryToUsd = 1 / usdRate;
-
-  // Convert TRY to EUR (inverse of EUR to TRY rate)
-  const tryToEur = 1 / eurRate;
-
-  // Return all conversion results
-  return {
-    usdToUsd: 1, // USD to USD is always 1
-    usdToTry, // USD to TRY
-    usdToEur: usdValue * (eurRate / usdRate), // USD to EUR using conversion rates
-    eurToTry, // EUR to TRY
-    eurToUsd: eurValue * (usdRate / eurRate), // EUR to USD using conversion rates
-    eurToEur: 1, // EUR to EUR is always 1
-    tryToTry: 1, // TRY to TRY is always 1
-    tryToUsd, // TRY to USD
-    tryToEur, // TRY to EUR
-  };
-}
-
 /**
  * Update asset prices in various currencies (TRY, USD, EUR).
  * @param data - Asset data to update
@@ -90,10 +47,10 @@ function convertCurrency(
  */
 const updateAssetPrices = async (data: any[], market: AssetMarket) => {
   const assetsToUpdate = mapDataToAsset(data, market);
-
   await Promise.all(
     assetsToUpdate.map(async (item) => {
       // Update asset data in the database
+
       await Asset.findOneAndUpdate(
         { ticker: item.ticker, market: item.market },
         {

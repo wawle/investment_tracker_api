@@ -2,11 +2,7 @@ import mongoose, { Document, Model, Schema } from "mongoose";
 import { AssetMarket, Currency } from "../utils/enums";
 import History from "./History";
 import { CurrencyRates, getCurrencyRates } from "../utils/currency-converter";
-import {
-  getAssetPrices,
-  getCurrencyAssets,
-  getExchangeRates,
-} from "../utils/price-setter";
+import { getAssetPrices, getRateValues } from "../utils/rate-handler";
 
 // Define a type for the price object
 export interface IPrice {
@@ -111,12 +107,28 @@ AssetSchema.methods.setPrice = function (
 };
 
 // Cascade delete Historys when a History is deleted
-AssetSchema.pre("save", async function (next) {
-  const { usdRate, eurRate } = await getExchangeRates();
+AssetSchema.post("save", async function () {
+  const { usdRate, eurRate } = await getRateValues();
   const rates = getCurrencyRates(usdRate, eurRate);
   this.setPrice(this.currency, this.price as any, rates);
+});
 
-  next(); // Proceed with the delete operation
+AssetSchema.pre("findOneAndUpdate", async function (next) {
+  // Extract the updated fields from this object to check if 'price' is being updated.
+  const update = this.getUpdate() as IAsset;
+  if (update && update.price) {
+    // Assuming `update.price` is the price to be converted and you want to handle currency conversion before update.
+    const newPrice = update.price as any;
+    const currency = update.currency;
+    const { usdRate, eurRate } = await getRateValues();
+    const rates = getCurrencyRates(usdRate, eurRate); // Fetch the latest currency rates.
+    // Convert the price
+    const convertedPrice = getAssetPrices(currency, newPrice, rates);
+    // Update the price in the update object directly
+    update.price = convertedPrice;
+  }
+
+  next(); // Proceed with the update operation
 });
 
 // Cascade delete Historys when a History is deleted

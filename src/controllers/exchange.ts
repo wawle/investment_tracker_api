@@ -2,8 +2,52 @@ import axios from "axios";
 import * as xml2js from "xml2js";
 import asyncHandler from "../middleware/async";
 import { NextFunction, Request, Response } from "express";
-import { Currency } from "../utils/enums";
 import { getCountryFlag } from "../utils";
+import { getCurrencyRates } from "../utils/currency-converter";
+import { getRateValues } from "../utils/rate-handler";
+
+export const fetchExchange = async (): Promise<
+  {
+    code: string;
+    name: string;
+    currency_name: string;
+    buy: string;
+    sell: string;
+    icon: string;
+    price: number;
+  }[]
+> => {
+  const response = await axios.get("https://www.tcmb.gov.tr/kurlar/today.xml");
+
+  // XML'i JSON'a dönüştürmek için xml2js kullan
+  const parser = new xml2js.Parser({ explicitArray: false });
+  const result = await parser.parseStringPromise(response.data);
+
+  // Döviz kuru verilerini içeren bölüm
+  const exchangeRates = result.Tarih_Date.Currency;
+
+  const exchange = exchangeRates
+    ?.map((item: any) => ({
+      code: item["$"].CurrencyCode,
+      name: item.Isim,
+      currency_name: item.CurrencyName,
+      buy: item.BanknoteBuying,
+      sell: item.BanknoteSelling,
+      price: parseFloat(item.BanknoteSelling.replace(",", ".")),
+      icon: getCountryFlag(item["$"].CurrencyCode),
+    }))
+    .filter(
+      (item: {
+        code: string;
+        name: string;
+        currency_name: string;
+        buy: string;
+        sell: string;
+      }) => item.sell !== "" && item.sell !== null && item.sell !== undefined
+    ); // Filter out invalid 'sell' values
+
+  return exchange;
+};
 
 // @desc      Get all exchange
 // @route     GET /api/v1/exchange
@@ -36,119 +80,17 @@ export const getExchanges = asyncHandler(
   }
 );
 
+// @desc      Get all exchange
+// @route     GET /api/v1/exchange/rates
+// @access    Public
 export const getExchangeRates = asyncHandler(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const exchanges = await fetchExchangeRates();
+    const { usdRate, eurRate } = await getRateValues();
+    const rates = getCurrencyRates(usdRate, eurRate);
 
     res.status(200).json({
       success: true,
-      data: exchanges,
+      data: rates,
     });
   }
 );
-
-// TCMB'nin döviz kuru verilerini almak için XML URL'si
-const url = "https://www.tcmb.gov.tr/kurlar/today.xml";
-
-// Döviz kuru verisini alıp JSON formatına dönüştüren fonksiyon
-// Fetch exchange rates for USD, EUR, and TRY
-export const fetchExchangeRates = async () => {
-  const response = await axios.get(url);
-
-  // XML to JSON conversion
-  const parser = new xml2js.Parser({ explicitArray: false });
-  const result = await parser.parseStringPromise(response.data);
-
-  const exchangeRates = result.Tarih_Date.Currency;
-
-  // Find specific currency exchange rates
-  const usdRate = exchangeRates.find(
-    (currency: any) => currency["$"].CurrencyCode === "USD"
-  )?.BanknoteSelling;
-  const eurRate = exchangeRates.find(
-    (currency: any) => currency["$"].CurrencyCode === "EUR"
-  )?.BanknoteSelling;
-
-  const usdToTry = Number(usdRate); // USD/TRY rate
-  const eurToTry = Number(eurRate); // EUR/TRY rate
-
-  // Return exchange rates to and from TRY, USD, EUR
-  return {
-    [Currency.TRY]: usdToTry,
-    [Currency.EUR]: usdToTry / eurToTry,
-    [Currency.USD]: 1,
-    from: {
-      [Currency.TRY]: 1,
-      [Currency.USD]: 1 / usdToTry,
-      [Currency.EUR]: 1 / eurToTry,
-    },
-  };
-};
-
-export const getCurrencyConversionRate = async (
-  fromCurrency: Currency,
-  toCurrency: Currency
-): Promise<number> => {
-  // Fetch the latest exchange rates
-  const response = await fetchExchangeRates();
-
-  let rate = 1;
-
-  // Conversion logic based on fromCurrency and toCurrency
-  if (fromCurrency === Currency.TRY) {
-    rate = response.from[toCurrency]; // TRY to target currency
-  } else if (toCurrency === Currency.TRY) {
-    rate = 1 / response.from[fromCurrency]; // Convert to TRY if target is TRY
-  } else {
-    rate = response[toCurrency] / response[fromCurrency]; // Any other pair
-  }
-
-  if (!rate) {
-    throw new Error(
-      `Conversion rate from ${fromCurrency} to ${toCurrency} not found.`
-    );
-  }
-
-  return rate;
-};
-
-export const fetchExchange = async (): Promise<
-  {
-    code: string;
-    name: string;
-    currency_name: string;
-    buy: string;
-    sell: string;
-  }[]
-> => {
-  const response = await axios.get(url);
-
-  // XML'i JSON'a dönüştürmek için xml2js kullan
-  const parser = new xml2js.Parser({ explicitArray: false });
-  const result = await parser.parseStringPromise(response.data);
-
-  // Döviz kuru verilerini içeren bölüm
-  const exchangeRates = result.Tarih_Date.Currency;
-
-  const exchange = exchangeRates
-    ?.map((item: any) => ({
-      code: item["$"].CurrencyCode,
-      name: item.Isim,
-      currency_name: item.CurrencyName,
-      buy: item.BanknoteBuying,
-      sell: item.BanknoteSelling,
-      price: parseFloat(item.BanknoteSelling.replace(",", ".")),
-      icon: getCountryFlag(item["$"].CurrencyCode),
-    }))
-    .filter(
-      (item: {
-        code: string;
-        name: string;
-        currency_name: string;
-        buy: string;
-        sell: string;
-      }) => item.sell !== "" && item.sell !== null && item.sell !== undefined
-    ); // Filter out invalid 'sell' values
-
-  return exchange;
-};

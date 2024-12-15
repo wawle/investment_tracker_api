@@ -21,10 +21,10 @@ export function getCurrencyRates(
   const try_eur = 1 / eurRate;
 
   // Convert USD to EUR
-  const usd_eur = eurRate / usdRate;
+  const usd_eur = usdRate / eurRate;
 
   // Convert eur to usd
-  const eur_usd = usdRate / eurRate;
+  const eur_usd = eurRate / usdRate;
 
   // Return all conversion results
   return {

@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from "mongoose";
 import Investment, { IInvestment } from "./Investment";
 import { AssetMarket, Currency, TransactionType } from "../utils/enums";
 import { IPrice } from "./Asset"; // Importing IPrice to reference asset prices
-import { getAssetPrices, getCurrencyAssets } from "../utils/price-setter";
+import { getAssetPrices, getCurrencyAssets } from "../utils/rate-handler";
 import ErrorResponse from "../utils/errorResponse";
 import { getCurrencyRates } from "../utils/currency-converter";
 

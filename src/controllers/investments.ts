@@ -1,6 +1,6 @@
 import asyncHandler from "../middleware/async";
 import { NextFunction, Request, Response } from "express";
-import Asset, { IAsset } from "../models/Asset";
+import Asset from "../models/Asset";
 import { AssetMarket, Currency } from "../utils/enums";
 import { roundToTwoDecimalPlaces } from "../utils";
 import Investment from "../models/Investment";
@@ -41,9 +41,6 @@ export const fetchInvestmentPrices = async (
   // Fetch all asset details in parallel (reduce redundant queries)
   const assets = await Asset.find({ _id: { $in: assetIds } });
 
-  // Fetch conversion rates for the target currency and all relevant currencies at once
-  const conversionRates = await fetchConversionRatesForAssets(targetCurrency);
-
   // Determine the date range based on the range parameter
   const now = new Date();
   let startDate: Date;
@@ -81,14 +78,11 @@ export const fetchInvestmentPrices = async (
 
     const { price: currentPrice, market, currency } = assetDetails;
 
-    // Get the conversion rate from the cache (conversionRates already contain rates for TRY, USD, EUR)
-    const assetConversionRate = conversionRates[currency];
-
     // Convert the current price based on the conversion rate (converting to the target currency)
-    const convertedCurrentPrice = currentPrice[currency] * assetConversionRate;
+    const convertedCurrentPrice = currentPrice[targetCurrency];
 
     // Convert avg_price as well
-    const convertedAvgPrice = avg_price * assetConversionRate;
+    const convertedAvgPrice = avg_price[targetCurrency];
 
     // Fetch historical prices for range calculations
     const histories = await History.find({
@@ -114,13 +108,13 @@ export const fetchInvestmentPrices = async (
 
     // Prepare the result for this investment
     investmentDetails.push({
+      amount,
       assetId: asset.id,
       ticker: asset.ticker,
       market: market,
       icon: asset.icon,
       name: asset.name,
       avgPrice: roundToTwoDecimalPlaces(convertedAvgPrice),
-      amount,
       currentPrice: roundToTwoDecimalPlaces(endPrice),
       balance: roundToTwoDecimalPlaces(balance),
       profitLoss: roundToTwoDecimalPlaces(profitLoss),
@@ -146,102 +140,6 @@ export const fetchInvestmentPrices = async (
     totalAmountByMarket,
   };
 };
-
-// Fetch conversion rates for assets and set prices
-export const updateAssetPricesWithConversion = async (
-  assets: IAsset[],
-  targetCurrency: Currency
-): Promise<void> => {
-  // Fetch conversion rates for all currencies
-  const conversionRates = await fetchConversionRatesForAssets(targetCurrency);
-
-  // Update the price field for each asset
-  await Promise.all(
-    assets.map(async (asset) => {
-      const basePrice = asset.price[targetCurrency]; // Get base price in target currency
-      const updatedPrice = {
-        [Currency.TRY]: basePrice * (1 / conversionRates[Currency.TRY] || 1),
-        [Currency.USD]: basePrice * (1 / conversionRates[Currency.USD] || 1),
-        [Currency.EUR]: basePrice * (1 / conversionRates[Currency.EUR] || 1),
-      };
-
-      await Asset.findOneAndUpdate(
-        { _id: asset._id },
-        { price: updatedPrice, scrapedAt: new Date() },
-        { new: true }
-      );
-    })
-  );
-};
-
-export const fetchConversionRatesForAssets = async (
-  fromCurrency: Currency
-): Promise<{ [currency: string]: number }> => {
-  // Extract all unique currencies used in the assets
-  const currencies = Array.from(new Set(Object.keys(Currency)));
-
-  // Fetch conversion rates for all currencies at once
-  const conversionPromises = currencies.map((currency) =>
-    getCurrencyConversionRate(currency, fromCurrency)
-  );
-  const conversionRates = await Promise.all(conversionPromises);
-
-  // Map currencies to their conversion rates
-  const rates: { [currency: string]: number } = {};
-  currencies.forEach((currency, index) => {
-    rates[currency] = conversionRates[index];
-  });
-
-  console.log({ rates, fromCurrency });
-
-  return rates;
-};
-
-export const getCurrencyConversionRate = async (
-  fromCurrency: string,
-  toCurrency: string
-): Promise<number> => {
-  if (fromCurrency === toCurrency) return 1;
-
-  const cacheKey = `${fromCurrency}_${toCurrency}`;
-  if (conversionRateCache[cacheKey]) {
-    console.log("Cache hit for", cacheKey);
-    return conversionRateCache[cacheKey];
-  }
-
-  let conversionRate: number;
-
-  try {
-    const fromAsset = await Asset.findOne({
-      ticker: fromCurrency,
-      market: AssetMarket.Exchange,
-    });
-    const toAsset = await Asset.findOne({
-      ticker: toCurrency,
-      market: AssetMarket.Exchange,
-    });
-
-    console.log({ fromCurrency, toCurrency, fromAsset, toAsset });
-
-    if (fromAsset && toAsset) {
-      conversionRate =
-        fromAsset.price[Currency.TRY] / toAsset.price[Currency.TRY];
-    } else {
-      throw new Error(
-        `Conversion rate not found for ${fromCurrency} or ${toCurrency} in TRY`
-      );
-    }
-  } catch (error: any) {
-    console.error(`Error fetching conversion rate: ${error?.message}`);
-    throw error;
-  }
-
-  conversionRateCache[cacheKey] = conversionRate;
-  return conversionRate;
-};
-
-// In-memory cache for storing conversion rates
-const conversionRateCache: { [key: string]: number } = {};
 
 const groupInvestmentsByMarket = (
   investmentPrices: IInvestmentWithProfitLoss[],
