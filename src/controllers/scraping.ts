@@ -1,3 +1,4 @@
+import { Request } from "express";
 import Asset from "../models/Asset";
 import { AssetMarket, Currency, Market } from "../utils/enums";
 import { priceProvider } from "../utils/price-provider";
@@ -144,13 +145,31 @@ export const fetchMarketData = async () => {
   };
 };
 
-// @desc      Get all market data
+// @desc      Get all market data or data for a specific market
 // @route     GET /api/v1/scraping
 // @access    Public
-// Scraping servisinin tüm marketler için veri çekmesini sağlayacak fonksiyon
 export const getMarketData = async (req: Request, res: any) => {
+  const { market } = req.query; // Get the market query parameter
+
   try {
-    const data = await fetchMarketData();
+    // If a market is provided, validate it
+    if (market && !Object.values(AssetMarket).includes(market as AssetMarket)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid market type provided.",
+      });
+    }
+
+    let data;
+
+    if (market) {
+      // If the market query parameter is provided, fetch data for that market
+      data = await fetchMarketDataForSpecificMarket(market as AssetMarket);
+    } else {
+      // If no market query parameter, fetch data for all markets
+      data = await fetchMarketData();
+    }
+
     res.status(200).json({
       success: true,
       data,
@@ -160,5 +179,48 @@ export const getMarketData = async (req: Request, res: any) => {
     res.status(500).json({
       error: "An error occurred while fetching market data.",
     });
+  }
+};
+
+// Fetch data for a specific market
+const fetchMarketDataForSpecificMarket = async (market: AssetMarket) => {
+  switch (market) {
+    case AssetMarket.USAStock:
+      const usaStocks = await fetchUsaStocks();
+      await updateAssetPrices(usaStocks, AssetMarket.USAStock);
+      return { usaStocks };
+
+    case AssetMarket.TRStock:
+      const trStocks = await fetchTRStocks();
+      await updateAssetPrices(trStocks, AssetMarket.TRStock);
+      return { trStocks };
+
+    case AssetMarket.Crypto:
+      const crypto = await priceProvider(Market.Crypto);
+      await updateAssetPrices(crypto, AssetMarket.Crypto);
+      return { crypto };
+
+    case AssetMarket.Commodity:
+      const commodities = await scrapeGoldPrices();
+      await updateAssetPrices(commodities, AssetMarket.Commodity);
+      return { commodities };
+
+    case AssetMarket.Exchange:
+      const exchange = await fetchExchange();
+      await updateAssetPrices(exchange, AssetMarket.Exchange);
+      return { exchange };
+
+    case AssetMarket.Fund:
+      const funds = await fetchFunds();
+      await updateAssetPrices(funds, AssetMarket.Fund);
+      return { funds };
+
+    case AssetMarket.Indicies:
+      const indicies = await fetchIndices();
+      await updateAssetPrices(indicies, AssetMarket.Indicies);
+      return { indicies };
+
+    default:
+      throw new Error(`Unknown market type: ${market}`);
   }
 };
