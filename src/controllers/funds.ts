@@ -61,7 +61,7 @@ interface FundData {
 
 export async function fetchFunds(): Promise<FundData[]> {
   // Fetch data from multiple sources using Promise.all
-  const [isbank, yapikredi, anadoluemeklilik, ydi]: FundData[][] =
+  const [isbank, yapikredi, anadoluemeklilik, ydi, aet, bgl]: FundData[][] =
     await Promise.all([
       // fetchAkBankFunds(),
       fetchIsBankFunds(),
@@ -76,12 +76,16 @@ export async function fetchFunds(): Promise<FundData[]> {
       ),
     ]);
 
+  console.log({ ydi, aet, bgl });
+
   // Flatten the array of arrays into a single array of FundData
   const data: FundData[] = [
     ...isbank,
     ...yapikredi,
     ...anadoluemeklilik,
     ...ydi,
+    ...aet,
+    ...bgl,
   ].filter((item) => item.fundName && item.fundCode && item.price);
 
   const updatedFunds = data.map((item) => ({
@@ -308,36 +312,42 @@ async function fetchFundByTicker(url: string): Promise<FundData[]> {
   });
   const page = await browser.newPage();
 
-  // Navigate to the website
-  await page.goto(url, {
-    timeout: 0,
-    waitUntil: "domcontentloaded",
-  });
+  try {
+    // Navigate to the website
+    await page.goto(url, {
+      timeout: 0,
+      waitUntil: "domcontentloaded",
+    });
 
-  // Extract ticker and name using CSS selectors
-  const data = await page.evaluate(() => {
-    // Get the name of the fund (long name)
-    const nameList = document
-      .querySelector("h2.osmanliTextColor")
-      ?.textContent?.trim()
-      .split(" - ");
+    // Extract ticker, name, and price
+    const data = await page.evaluate(() => {
+      // Select the main heading for the fund
+      const nameElement = document.querySelector("h2.osmanliTextColor");
+      const nameText = nameElement?.textContent?.trim() || "";
 
-    // Get the price from the span with class 'change-value-span-2'
-    const priceList = document
-      .querySelector(".change-value-span-2 strong")
-      ?.textContent?.trim()
-      .split(" ");
+      // Split the text into ticker and name
+      const [fundCode = "", fundName = ""] = nameText
+        .split(" - ")
+        .map((s) => s.trim());
 
-    return {
-      fundName: (nameList?.[1] || "")?.substring(0, 50),
-      fundCode: nameList?.[0] || "",
-      price: priceList?.[0]?.replace(".", ",") || "",
-    };
-  });
+      // Extract price from the specific span
+      const priceElement = document.querySelector(".change-value-span-2");
+      const priceText = priceElement?.textContent?.trim() || "";
+      const [price = ""] = priceText.split(" ");
 
-  // Close the browser instance after scraping
-  await browser.close();
+      return {
+        fundName: fundName.substring(0, 50), // Truncate if necessary
+        fundCode,
+        price,
+      };
+    });
 
-  // Send the scraped data as a JSON response
-  return [data];
+    return [data];
+  } catch (error) {
+    console.error("Error fetching fund data:", error);
+    return [];
+  } finally {
+    // Ensure the browser is closed
+    await browser.close();
+  }
 }

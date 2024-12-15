@@ -37,7 +37,7 @@ export default {
     },
     {
       url: "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/finance-rental-leasing",
-      market: Market.USAFund,
+      market: Market.FinanceRental,
     },
     {
       url: "https://tradingview.com/markets/stocks-turkey/sectorandindustry-sector/technology-services",
