@@ -72,7 +72,7 @@ export default {
   countries: [
     {
       name: "Turkey",
-      flag: createCountryFlagUrl("/5/5f/Flag_of_Turkey.svg"),
+      flag: createCountryFlagUrl("/b/b4/Flag_of_Turkey.svg"),
       currency: "TRY", // Turkish Lira
     },
     {

@@ -7,104 +7,103 @@ import { fetchExchange } from "./exchange";
 import { fetchFunds } from "./funds";
 import { fetchIndices } from "./indicies";
 import { fetchTRStocks, fetchUsaStocks } from "./stocks";
+import { fetchConversionRatesForAssets } from "./investments";
 
 // Her market türü için verileri eşleştiren fonksiyon
 const mapDataToAsset = (data: any[], market: AssetMarket) => {
   return data.map((item) => {
+    let currency: Currency;
+
+    // Default currency based on asset market
     switch (market) {
-      case AssetMarket.USAStock:
-        return {
-          ticker: item.ticker,
-          price: item.price, // Fiyatı sayıya çeviriyoruz
-          currency: item.currency, // Para birimini dönüştürüyoruz
-          icon: item.icon,
-          name: item.name,
-          market,
-        };
-
       case AssetMarket.TRStock:
-        return {
-          ticker: item.ticker,
-          price: item.price, // Fiyatı sayıya çeviriyoruz
-          currency: item.currency, // Para birimini dönüştürüyoruz
-          icon: item.icon,
-          name: item.name,
-          market,
-        };
-
-      case AssetMarket.Crypto:
-        return {
-          ticker: item.ticker,
-          price: item.price,
-          currency: item.currency,
-          icon: item.icon,
-          name: item.name,
-          market,
-        };
-
-      case AssetMarket.Commodity:
-        return {
-          ticker: item.code,
-          price: item.price,
-          currency: Currency.TRY,
-          icon: "",
-          name: item.name,
-          market,
-        };
-
       case AssetMarket.Exchange:
-        return {
-          ticker: item.code,
-          price: item.price,
-          currency: Currency.TRY,
-          icon: item.icon,
-          name: item.name,
-          market,
-        };
-
       case AssetMarket.Fund:
-        return {
-          ticker: item.fundCode,
-          price: item.fundPrice,
-          currency: Currency.TRY,
-          icon: "",
-          name: item.fundName,
-          market,
-        };
-
+      case AssetMarket.Commodity:
+        currency = Currency.TRY;
+        break;
+      case AssetMarket.USAStock:
       case AssetMarket.Indicies:
-        return {
-          ticker: item.ticker,
-          price: item.price,
-          currency: Currency.USD,
-          icon: item.icon,
-          name: item.name,
-          market,
-        };
-
+      case AssetMarket.Crypto:
+        currency = Currency.USD;
+        break;
       default:
         throw new Error(`Unknown market type: ${market}`);
     }
+    return {
+      ticker: item.ticker || item.code || item.fundCode, // Handle multiple field names for ticker
+      price: item.price, // Assuming `price` contains the base currency prices (e.g., TRY, USD, EUR)
+      currency: currency,
+      icon: item.icon || "", // Default empty string if not provided
+      name: item.name || item.fundName || "", // Handle multiple field names for name
+      market,
+    };
   });
 };
 
 // Asset'leri güncelleme fonksiyonu
+// Function to update asset prices for all currencies
+/**
+ * Convert USD and EUR to TRY and the reverse (TRY to USD and TRY to EUR).
+ * @param usdValue - Amount in USD
+ * @param eurValue - Amount in EUR
+ * @param usdRate - Conversion rate from USD to TRY
+ * @param eurRate - Conversion rate from EUR to TRY
+ * @returns - An object with conversion results
+ */
+function convertCurrency(
+  usdValue: number,
+  eurValue: number,
+  usdRate: number,
+  eurRate: number
+) {
+  // Convert USD to TRY
+  const usdToTry = usdValue * usdRate;
+
+  // Convert EUR to TRY
+  const eurToTry = eurValue * eurRate;
+
+  // Convert TRY to USD (inverse of USD to TRY rate)
+  const tryToUsd = 1 / usdRate;
+
+  // Convert TRY to EUR (inverse of EUR to TRY rate)
+  const tryToEur = 1 / eurRate;
+
+  // Return all conversion results
+  return {
+    usdToUsd: 1, // USD to USD is always 1
+    usdToTry, // USD to TRY
+    usdToEur: usdValue * (eurRate / usdRate), // USD to EUR using conversion rates
+    eurToTry, // EUR to TRY
+    eurToUsd: eurValue * (usdRate / eurRate), // EUR to USD using conversion rates
+    eurToEur: 1, // EUR to EUR is always 1
+    tryToTry: 1, // TRY to TRY is always 1
+    tryToUsd, // TRY to USD
+    tryToEur, // TRY to EUR
+  };
+}
+
+/**
+ * Update asset prices in various currencies (TRY, USD, EUR).
+ * @param data - Asset data to update
+ * @param market - The market for the assets
+ */
 const updateAssetPrices = async (data: any[], market: AssetMarket) => {
   const assetsToUpdate = mapDataToAsset(data, market);
 
-  // Veritabanında asset'leri güncelleme
   await Promise.all(
     assetsToUpdate.map(async (item) => {
+      // Update asset data in the database
       await Asset.findOneAndUpdate(
-        { ticker: item.ticker, market: item.market }, // Ticker ve market bazında arama
+        { ticker: item.ticker, market: item.market },
         {
-          price: item.price, // Fiyatı güncelle
-          currency: item.currency, // Para birimini güncelle
-          name: item.name, // İsim bilgisini güncelle
-          icon: item.icon, // Logoyu güncelle
-          scrapedAt: new Date(), // Çekilme zamanını güncelle
+          price: item.price,
+          currency: item.currency,
+          name: item.name,
+          icon: item.icon,
+          scrapedAt: new Date(),
         },
-        { upsert: true, new: true } // Eğer asset yoksa yeni bir tane oluştur, varsa güncelle
+        { upsert: true, new: true }
       );
     })
   );

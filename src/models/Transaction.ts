@@ -1,11 +1,15 @@
 import mongoose, { Document, Schema } from "mongoose";
 import Investment, { IInvestment } from "./Investment";
-import { TransactionType } from "../utils/enums";
+import { AssetMarket, Currency, TransactionType } from "../utils/enums";
+import { IPrice } from "./Asset"; // Importing IPrice to reference asset prices
+import { getAssetPrices, getCurrencyAssets } from "../utils/price-setter";
+import ErrorResponse from "../utils/errorResponse";
+import { getCurrencyRates } from "../utils/currency-converter";
 
 export interface ITransaction extends Document {
   _id: string;
   investment: IInvestment;
-  price: number;
+  price: IPrice; // Track the price for each transaction in different currencies
   quantity: number;
   type: TransactionType;
 }
@@ -18,8 +22,13 @@ const TransactionSchema: Schema<ITransaction> = new Schema(
       required: true,
     },
     price: {
-      type: Number,
-      default: 0,
+      type: Object,
+      required: true,
+      default: {
+        [Currency.TRY]: 0,
+        [Currency.EUR]: 0,
+        [Currency.USD]: 0,
+      },
     },
     quantity: {
       type: Number,
@@ -34,31 +43,91 @@ const TransactionSchema: Schema<ITransaction> = new Schema(
   { timestamps: true }
 );
 
-// Ortalamayı hesaplayacak fonksiyon
 const getAverageCost = async function (investmentId: string) {
   try {
-    // Tüm işlemleri al
-    const transactions = await Transaction.find({ investment: investmentId });
+    // Fetch investment with asset population
+    const investment = await Investment.findById(investmentId).populate(
+      "asset"
+    );
+    const asset = investment?.asset; // Get the associated asset
+    const assetMarket = asset?.market;
 
-    let totalAmount = 0;
-    let totalQuantity = 0;
-
-    // Her işlem için döviz kuru dönüşümü yap
-    for (const transaction of transactions) {
-      totalAmount += transaction.price * transaction.quantity;
-      totalQuantity += transaction.quantity;
+    // Determine the default currency based on asset market
+    let defaultCurrency: Currency;
+    switch (assetMarket) {
+      case AssetMarket.TRStock:
+      case AssetMarket.Exchange:
+      case AssetMarket.Fund:
+      case AssetMarket.Commodity:
+        defaultCurrency = Currency.TRY;
+        break;
+      case AssetMarket.USAStock:
+      case AssetMarket.Indicies:
+      case AssetMarket.Crypto:
+        defaultCurrency = Currency.USD;
+        break;
+      default:
+        throw new Error("Unknown asset market.");
     }
-    // Ortalama maliyeti hesapla
-    const averageCost = totalAmount / totalQuantity;
 
-    await Investment.findByIdAndUpdate(investmentId, {
-      avg_price: Number(averageCost.toFixed(2)), // En yakın 10'a yuvarlama
-      amount: totalQuantity,
-    });
+    // Use Mongoose aggregation to calculate totalAmount and totalQuantity
+    const [result] = await Transaction.aggregate([
+      { $match: { investment: new mongoose.Types.ObjectId(investmentId) } }, // Match transactions for this investment
+      {
+        $project: {
+          priceInDefaultCurrency: {
+            $ifNull: [{ $arrayElemAt: [`$price.${defaultCurrency}`, 0] }, 0],
+          },
+          quantity: 1,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: {
+            $sum: { $multiply: ["$priceInDefaultCurrency", "$quantity"] },
+          },
+          totalQuantity: { $sum: "$quantity" },
+        },
+      },
+    ]);
 
-    console.log("Ortalama maliyet TRY cinsinden güncellendi:", averageCost);
+    if (!result) {
+      console.log("No transactions found for this investment.");
+      return;
+    }
+
+    const { totalAmount, totalQuantity } = result;
+
+    // Calculate the average cost
+    if (totalQuantity > 0) {
+      const averageCost = totalAmount / totalQuantity;
+
+      // Fetch currency assets for USD and EUR to get conversion rates
+      const [EURAsset, USDAsset] = await getCurrencyAssets();
+
+      if (!USDAsset?.price.try || !EURAsset?.price.try) {
+        return new ErrorResponse("USDAsset or EURAsset not found", 404);
+      }
+
+      // Extract conversion rates for USD and EUR to TRY
+      const usdRate = USDAsset.price.try;
+      const eurRate = EURAsset.price.try;
+      const rates = getCurrencyRates(usdRate, eurRate);
+
+      // Convert the average cost into the appropriate currencies
+      const avg_price = getAssetPrices(defaultCurrency, averageCost, rates);
+
+      // Update the investment with the calculated average cost and quantity
+      await Investment.findByIdAndUpdate(investmentId, {
+        avg_price: avg_price,
+        amount: totalQuantity,
+      });
+
+      console.log("Average cost updated:", averageCost);
+    }
   } catch (error) {
-    console.error("Ortalama maliyet hesaplama hatası:", error);
+    console.error("Error calculating average cost:", error);
   }
 };
 
@@ -67,21 +136,27 @@ TransactionSchema.post("save", async function () {
   getAverageCost(this.investment as any);
 });
 
-// Call getAverageCost after save
-TransactionSchema.pre("findOneAndUpdate", async function (next) {
+// Call getAverageCost after update
+TransactionSchema.post("findOneAndUpdate", async function (next) {
   const transactionId = (this as any)._conditions._id;
   const transaction = await Transaction.findById(transactionId);
-  if (!transaction) next();
-  getAverageCost(transaction?.investment as any);
+  if (transaction) {
+    getAverageCost(transaction?.investment as any);
+  }
+  next();
 });
 
-// Call getAverageCost before remove
-TransactionSchema.pre("findOneAndDelete", function () {
+// Call getAverageCost before delete
+TransactionSchema.pre("findOneAndDelete", async function (next) {
   const transactionId = (this as any)._conditions._id;
-  getAverageCost(transactionId);
+  const transaction = await Transaction.findById(transactionId);
+  if (transaction) {
+    getAverageCost(transaction?.investment as any);
+  }
+  next();
 });
 
-// Mongoose modelini dışa aktarıyoruz
+// Mongoose model export
 const Transaction = mongoose.model<ITransaction>(
   "Transaction",
   TransactionSchema

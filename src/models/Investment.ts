@@ -1,13 +1,14 @@
 import mongoose, { Document, Schema } from "mongoose";
 import { IAccount } from "./Account";
 import Transaction from "./Transaction";
-import { IAsset } from "./Asset";
+import { IAsset, IPrice } from "./Asset";
+import { Currency } from "../utils/enums";
 
 export interface IInvestment extends Document {
   _id: string;
   asset: IAsset;
   account: IAccount;
-  avg_price: number;
+  avg_price: IPrice;
   amount: number;
 }
 
@@ -24,8 +25,13 @@ const InvestmentSchema: Schema<IInvestment> = new Schema(
       required: true,
     },
     avg_price: {
-      type: Number,
-      default: 0,
+      type: Object,
+      required: true,
+      default: {
+        [Currency.TRY]: 0,
+        [Currency.EUR]: 0,
+        [Currency.USD]: 0,
+      },
     },
     amount: {
       type: Number,

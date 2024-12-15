@@ -10,8 +10,8 @@ import History from "../models/History";
 // Define the structure for the profit/loss data
 export interface IInvestmentWithProfitLoss {
   assetId: string;
-  symbol: string;
-  type: AssetMarket;
+  ticker: string;
+  market: AssetMarket;
   name: string;
   icon?: string;
   avgPrice: number;
@@ -42,10 +42,7 @@ export const fetchInvestmentPrices = async (
   const assets = await Asset.find({ _id: { $in: assetIds } });
 
   // Fetch conversion rates for the target currency and all relevant currencies at once
-  const conversionRates = await fetchConversionRatesForAssets(
-    assets,
-    targetCurrency
-  );
+  const conversionRates = await fetchConversionRatesForAssets(targetCurrency);
 
   // Determine the date range based on the range parameter
   const now = new Date();
@@ -82,13 +79,13 @@ export const fetchInvestmentPrices = async (
       continue;
     }
 
-    const { price: currentPrice, market } = assetDetails;
+    const { price: currentPrice, market, currency } = assetDetails;
 
     // Get the conversion rate from the cache (conversionRates already contain rates for TRY, USD, EUR)
-    const assetConversionRate = conversionRates[assetDetails.currency];
+    const assetConversionRate = conversionRates[currency];
 
     // Convert the current price based on the conversion rate (converting to the target currency)
-    const convertedCurrentPrice = currentPrice * assetConversionRate;
+    const convertedCurrentPrice = currentPrice[currency] * assetConversionRate;
 
     // Convert avg_price as well
     const convertedAvgPrice = avg_price * assetConversionRate;
@@ -100,9 +97,15 @@ export const fetchInvestmentPrices = async (
     }).sort({ createdAt: 1 });
 
     // Use the first and last historical prices in the range
-    const startPrice = histories[0]?.close_price || convertedAvgPrice;
+    const startPrice = histories.length
+      ? histories[0].close_price[targetCurrency] || convertedAvgPrice
+      : convertedAvgPrice;
+
     const endPrice =
-      histories[histories.length - 1]?.close_price || convertedCurrentPrice;
+      histories.length > 0
+        ? histories[histories.length - 1].close_price[targetCurrency] ||
+          convertedCurrentPrice
+        : convertedCurrentPrice;
 
     // Calculate balance and profit/loss in the target currency
     const balance = amount * endPrice;
@@ -112,8 +115,8 @@ export const fetchInvestmentPrices = async (
     // Prepare the result for this investment
     investmentDetails.push({
       assetId: asset.id,
-      symbol: asset.ticker,
-      type: market,
+      ticker: asset.ticker,
+      market: market,
       icon: asset.icon,
       name: asset.name,
       avgPrice: roundToTwoDecimalPlaces(convertedAvgPrice),
@@ -144,17 +147,42 @@ export const fetchInvestmentPrices = async (
   };
 };
 
-// Fetch all required conversion rates in parallel (memoization)
-const fetchConversionRatesForAssets = async (
+// Fetch conversion rates for assets and set prices
+export const updateAssetPricesWithConversion = async (
   assets: IAsset[],
   targetCurrency: Currency
+): Promise<void> => {
+  // Fetch conversion rates for all currencies
+  const conversionRates = await fetchConversionRatesForAssets(targetCurrency);
+
+  // Update the price field for each asset
+  await Promise.all(
+    assets.map(async (asset) => {
+      const basePrice = asset.price[targetCurrency]; // Get base price in target currency
+      const updatedPrice = {
+        [Currency.TRY]: basePrice * (1 / conversionRates[Currency.TRY] || 1),
+        [Currency.USD]: basePrice * (1 / conversionRates[Currency.USD] || 1),
+        [Currency.EUR]: basePrice * (1 / conversionRates[Currency.EUR] || 1),
+      };
+
+      await Asset.findOneAndUpdate(
+        { _id: asset._id },
+        { price: updatedPrice, scrapedAt: new Date() },
+        { new: true }
+      );
+    })
+  );
+};
+
+export const fetchConversionRatesForAssets = async (
+  fromCurrency: Currency
 ): Promise<{ [currency: string]: number }> => {
   // Extract all unique currencies used in the assets
-  const currencies = Array.from(new Set(assets.map((asset) => asset.currency)));
+  const currencies = Array.from(new Set(Object.keys(Currency)));
 
   // Fetch conversion rates for all currencies at once
   const conversionPromises = currencies.map((currency) =>
-    getCurrencyConversionRate(currency, targetCurrency)
+    getCurrencyConversionRate(currency, fromCurrency)
   );
   const conversionRates = await Promise.all(conversionPromises);
 
@@ -164,6 +192,8 @@ const fetchConversionRatesForAssets = async (
     rates[currency] = conversionRates[index];
   });
 
+  console.log({ rates, fromCurrency });
+
   return rates;
 };
 
@@ -171,13 +201,9 @@ export const getCurrencyConversionRate = async (
   fromCurrency: string,
   toCurrency: string
 ): Promise<number> => {
-  // If both currencies are the same, return 1 as no conversion is needed
   if (fromCurrency === toCurrency) return 1;
 
-  // Prepare cache key for conversion rate
   const cacheKey = `${fromCurrency}_${toCurrency}`;
-
-  // Check if conversion rate is cached
   if (conversionRateCache[cacheKey]) {
     console.log("Cache hit for", cacheKey);
     return conversionRateCache[cacheKey];
@@ -186,61 +212,31 @@ export const getCurrencyConversionRate = async (
   let conversionRate: number;
 
   try {
-    if (toCurrency === Currency.TRY) {
-      // Converting to TRY, use the price of the 'fromCurrency' in TRY
-      const fromAsset = await Asset.findOne({
-        ticker: fromCurrency.toUpperCase(),
-        currency: Currency.TRY,
-      });
+    const fromAsset = await Asset.findOne({
+      ticker: fromCurrency,
+      market: AssetMarket.Exchange,
+    });
+    const toAsset = await Asset.findOne({
+      ticker: toCurrency,
+      market: AssetMarket.Exchange,
+    });
 
-      if (fromAsset) {
-        conversionRate = fromAsset.price; // fromCurrency to TRY
-      } else {
-        throw new Error(`Conversion rate not found for ${fromCurrency} in TRY`);
-      }
-    } else if (fromCurrency === Currency.TRY) {
-      // Converting from TRY, use the price of the 'toCurrency' in TRY
-      const toAsset = await Asset.findOne({
-        ticker: toCurrency.toUpperCase(),
-        currency: Currency.TRY,
-      });
+    console.log({ fromCurrency, toCurrency, fromAsset, toAsset });
 
-      if (toAsset) {
-        conversionRate = 1 / toAsset.price; // TRY to toCurrency
-      } else {
-        throw new Error(`Conversion rate not found for ${toCurrency} in TRY`);
-      }
+    if (fromAsset && toAsset) {
+      conversionRate =
+        fromAsset.price[Currency.TRY] / toAsset.price[Currency.TRY];
     } else {
-      // Converting between two non-TRY currencies (e.g., USD to EUR)
-      const [fromAsset, toAsset] = await Promise.all([
-        Asset.findOne({
-          ticker: fromCurrency.toUpperCase(),
-          currency: Currency.TRY,
-        }),
-        Asset.findOne({
-          ticker: toCurrency.toUpperCase(),
-          currency: Currency.TRY,
-        }),
-      ]);
-
-      if (fromAsset && toAsset) {
-        // USD to EUR or other non-TRY to non-TRY conversions
-        conversionRate = fromAsset.price / toAsset.price;
-      } else {
-        throw new Error(
-          `Conversion rate not found for ${fromCurrency} or ${toCurrency} in TRY`
-        );
-      }
+      throw new Error(
+        `Conversion rate not found for ${fromCurrency} or ${toCurrency} in TRY`
+      );
     }
-  } catch (error) {
+  } catch (error: any) {
+    console.error(`Error fetching conversion rate: ${error?.message}`);
     throw error;
   }
 
-  // Cache the conversion rate for future use
   conversionRateCache[cacheKey] = conversionRate;
-
-  console.log("Conversion rate calculated:", conversionRate);
-
   return conversionRate;
 };
 
@@ -257,33 +253,42 @@ const groupInvestmentsByMarket = (
       investments: IInvestmentWithProfitLoss[];
       totalProfitLoss: number;
       totalProfitLossPercentage: number;
-      totalBalance: number; // New property to track total balance by market
+      totalBalance: number; // Track total balance by market
     };
   } = {};
 
   investmentPrices.forEach((investment) => {
-    if (!groupedInvestments[investment.type]) {
-      groupedInvestments[investment.type] = {
+    const marketType = investment.market;
+
+    // Initialize market grouping if it doesn't exist
+    if (!groupedInvestments[marketType]) {
+      groupedInvestments[marketType] = {
         investments: [],
         totalProfitLoss: 0,
         totalProfitLossPercentage: 0,
         totalBalance: 0, // Initialize totalBalance for each market type
       };
     }
-    groupedInvestments[investment.type].investments.push(investment);
-    groupedInvestments[investment.type].totalProfitLoss +=
-      investment.profitLoss;
-    groupedInvestments[investment.type].totalBalance +=
-      investment.amount * investment.currentPrice; // Accumulate the balance
+
+    // Accumulate individual investment data
+    groupedInvestments[marketType].investments.push(investment);
+    groupedInvestments[marketType].totalProfitLoss += investment.profitLoss;
+
+    // Accumulate the balance (amount * currentPrice) for each market
+    const balance = investment.amount * investment.currentPrice;
+    groupedInvestments[marketType].totalBalance += balance;
   });
 
-  // Add total profit/loss percentage and balance by market
+  // Calculate total profit/loss percentage and balance by market
   Object.keys(groupedInvestments).forEach((market) => {
-    const totalProfitLoss = totalProfitLossByMarket[market];
-    const totalValue = totalValueByMarket[market];
+    const totalProfitLoss = totalProfitLossByMarket[market] || 0;
+    const totalValue = totalValueByMarket[market] || 0;
 
     // Calculate profit/loss percentage for the market
-    const totalProfitLossPercentage = (totalProfitLoss / totalValue) * 100;
+    const totalProfitLossPercentage =
+      totalValue > 0 ? (totalProfitLoss / totalValue) * 100 : 0;
+
+    // Round and assign final values
     groupedInvestments[market].totalBalance = roundToTwoDecimalPlaces(
       groupedInvestments[market].totalBalance
     );
