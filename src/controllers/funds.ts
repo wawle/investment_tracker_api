@@ -56,6 +56,7 @@ interface FundData {
   fundName: string;
   fundCode: string;
   price: string;
+  fundPrice?: number;
 }
 
 export async function fetchFunds(): Promise<FundData[]> {
@@ -77,7 +78,13 @@ export async function fetchFunds(): Promise<FundData[]> {
     ...ydi,
   ].filter((item) => item.fundName && item.fundCode && item.price);
 
-  return data;
+  const updatedFunds = data.map((item) => ({
+    ...item,
+    fundCode: item.fundCode.replace("(", ""),
+    fundPrice: parseFloat(item.price.replace(",", ".")),
+  }));
+
+  return updatedFunds;
 }
 
 async function fetchIsBankFunds(): Promise<FundData[]> {

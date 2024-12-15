@@ -3,6 +3,7 @@ import * as xml2js from "xml2js";
 import asyncHandler from "../middleware/async";
 import { NextFunction, Request, Response } from "express";
 import { Currency } from "../utils/enums";
+import { getCountryFlag } from "../utils";
 
 // @desc      Get all exchange
 // @route     GET /api/v1/exchange
@@ -222,6 +223,8 @@ export const fetchExchange = async (): Promise<
       currency_name: item.CurrencyName,
       buy: item.BanknoteBuying,
       sell: item.BanknoteSelling,
+      price: parseFloat(item.BanknoteSelling.replace(",", ".")),
+      icon: getCountryFlag(item["$"].CurrencyCode),
     }))
     .filter(
       (item: {

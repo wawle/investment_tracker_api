@@ -18,6 +18,7 @@ export enum Market {
   TRBankBroker = "tr-bank-broker",
   TRFinance = "tr-finance",
   TRTum100 = "tr-tum-100",
+  Indicies = "indicies",
 }
 
 export enum AssetMarket {
@@ -27,6 +28,7 @@ export enum AssetMarket {
   Fund = "fund",
   Commodity = "commodity",
   Crypto = "crypto",
+  Indicies = "indicies",
 }
 
 export enum TransactionType {

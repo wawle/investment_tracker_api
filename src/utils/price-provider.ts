@@ -79,7 +79,7 @@ export const priceProvider = async (market: string) => {
 
         const result: {
           ticker: string;
-          price: string;
+          price: number;
           currency: string;
           icon: string | null;
           name: string;
@@ -120,12 +120,16 @@ export const priceProvider = async (market: string) => {
                 const [price, currency] = priceText.split(" ");
                 // Check if the currency is in the allowed currencies list
                 if (
-                  allowedCurrencies.includes(currency.toLowerCase() as Currency)
+                  allowedCurrencies.includes(
+                    currency?.toLowerCase() as Currency
+                  )
                 ) {
+                  const sanitizedPrice = price.replace(/,/g, ""); // Remove all commas
+                  const updatedPrice = parseFloat(sanitizedPrice); // Convert to float
                   result.push({
                     ticker: tickerName,
-                    price: price,
-                    currency: currency,
+                    price: updatedPrice,
+                    currency: currency?.toLowerCase() as Currency,
                     icon: iconSrc,
                     name: tickerDescription,
                   });

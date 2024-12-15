@@ -4,7 +4,7 @@ import { AssetMarket, Market } from "./enums";
 export default {
   market_list: [
     {
-      url: "https://tr.tradingview.com/symbols/DJ-DJI/components",
+      url: "https://tradingview.com/symbols/DJ-DJI/components",
       market: Market.DownJones,
     },
     {
@@ -12,48 +12,52 @@ export default {
       market: Market.Crypto,
     },
     {
-      url: "https://tr.tradingview.com/symbols/NASDAQ-NDX/components",
+      url: "https://tradingview.com/symbols/NASDAQ-NDX/components",
       market: Market.Nasdaq,
     },
     {
-      url: "https://tr.tradingview.com/symbols/BIST-XU100/components",
+      url: "https://tradingview.com/symbols/BIST-XU100/components",
       market: Market.Bist100,
     },
     {
-      url: "https://tr.tradingview.com/symbols/SPX/components/?exchange=SP",
+      url: "https://tradingview.com/symbols/SPX/components/?exchange=SP",
       market: Market.SP500,
     },
     {
-      url: "https://www.tradingview.com/markets/stocks-usa/sectorandindustry-industry/electronic-production-equipment",
+      url: "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/electronic-production-equipment",
       market: Market.Electronic,
     },
     {
-      url: "https://tr.tradingview.com/markets/etfs/funds-highest-aum-growth",
+      url: "https://tradingview.com/markets/etfs/funds-highest-aum-growth",
       market: Market.ETF,
     },
     {
-      url: "https://tr.tradingview.com/markets/stocks-usa/sectorandindustry-industry/investment-trusts-mutual-funds",
+      url: "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/investment-trusts-mutual-funds",
       market: Market.USAFund,
     },
     {
-      url: "https://tr.tradingview.com/markets/stocks-usa/sectorandindustry-industry/finance-rental-leasing",
+      url: "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/finance-rental-leasing",
       market: Market.USAFund,
     },
     {
-      url: "https://tr.tradingview.com/markets/stocks-turkey/sectorandindustry-sector/technology-services",
+      url: "https://tradingview.com/markets/stocks-turkey/sectorandindustry-sector/technology-services",
       market: Market.TRTechnology,
     },
     {
-      url: "https://www.tradingview.com/markets/stocks-turkey/sectorandindustry-industry/investment-banks-brokers",
+      url: "https://tradingview.com/markets/stocks-turkey/sectorandindustry-industry/investment-banks-brokers",
       market: Market.TRBankBroker,
     },
     {
-      url: "https://www.tradingview.com/markets/stocks-turkey/sectorandindustry-sector/finance",
+      url: "https://tradingview.com/markets/stocks-turkey/sectorandindustry-sector/finance",
       market: Market.TRFinance,
     },
     {
-      url: "https://tr.tradingview.com/symbols/BIST-XTUMY/components",
+      url: "https://tradingview.com/symbols/BIST-XTUMY/components",
       market: Market.TRTum100,
+    },
+    {
+      url: "https://tradingview.com/markets/indices/quotes-all",
+      market: Market.Indicies,
     },
   ],
   asset_type_list: [
@@ -63,6 +67,7 @@ export default {
     { name: "Döviz", type: AssetMarket.Exchange },
     { name: "Fonlar", type: AssetMarket.Fund },
     { name: "Kripto paralar", type: AssetMarket.Crypto },
+    { name: "Endeksler", type: AssetMarket.Indicies },
   ],
   countries: [
     {

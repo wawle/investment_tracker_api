@@ -26,6 +26,7 @@ import exchangeRouter from "./routes/exchange";
 import investmentsRouter from "./routes/investments";
 import fundsRouter from "./routes/funds";
 import stocksRouter from "./routes/stocks";
+import indiciesRouter from "./routes/indicies";
 import commoditiesRouter from "./routes/commodities";
 import scrapingRouter from "./routes/scraping";
 import historiesRouter from "./routes/histories";
@@ -79,6 +80,8 @@ app.use("/api/v1/exchange", exchangeRouter);
 app.use("/api/v1/funds", fundsRouter);
 // hisse senetleri için
 app.use("/api/v1/stocks", stocksRouter);
+// indicies
+app.use("/api/v1/indicies", indiciesRouter);
 // altın ve gümüş için
 app.use("/api/v1/commodities", commoditiesRouter);
 // investments

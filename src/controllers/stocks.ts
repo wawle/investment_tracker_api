@@ -79,7 +79,7 @@ export const fetchUsaStocks = async () => {
     (
       accumulator: {
         ticker: string;
-        price: string;
+        price: number;
         currency: string;
         icon: string | null;
         name: string;
@@ -120,7 +120,7 @@ export const fetchTRStocks = async () => {
     (
       accumulator: {
         ticker: string;
-        price: string;
+        price: number;
         currency: string;
         icon: string | null;
         name: string;

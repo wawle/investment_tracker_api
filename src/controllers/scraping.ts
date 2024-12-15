@@ -1,10 +1,10 @@
 import Asset from "../models/Asset";
-import { getCountryFlag, parsePrice } from "../utils";
 import { AssetMarket, Currency, Market } from "../utils/enums";
 import { priceProvider } from "../utils/price-provider";
 import { scrapeGoldPrices } from "./commodity";
 import { fetchExchange } from "./exchange";
 import { fetchFunds } from "./funds";
+import { fetchIndices } from "./indicies";
 import { fetchTRStocks, fetchUsaStocks } from "./stocks";
 
 // Her market türü için verileri eşleştiren fonksiyon
@@ -14,8 +14,8 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
       case AssetMarket.USAStock:
         return {
           ticker: item.ticker,
-          price: parseFloat(item.price.replace(",", ".")), // Fiyatı sayıya çeviriyoruz
-          currency: item.currency?.toLowerCase() as Currency, // Para birimini dönüştürüyoruz
+          price: item.price, // Fiyatı sayıya çeviriyoruz
+          currency: item.currency, // Para birimini dönüştürüyoruz
           icon: item.icon,
           name: item.name,
           market,
@@ -24,8 +24,8 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
       case AssetMarket.TRStock:
         return {
           ticker: item.ticker,
-          price: parseFloat(item.price.replace(",", ".")), // Fiyatı sayıya çeviriyoruz
-          currency: item.currency?.toLowerCase() as Currency, // Para birimini dönüştürüyoruz
+          price: item.price, // Fiyatı sayıya çeviriyoruz
+          currency: item.currency, // Para birimini dönüştürüyoruz
           icon: item.icon,
           name: item.name,
           market,
@@ -34,8 +34,8 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
       case AssetMarket.Crypto:
         return {
           ticker: item.ticker,
-          price: parsePrice(item.price), // Fiyatı sayıya çeviriyoruz
-          currency: item.currency?.toLowerCase() as Currency, // Para birimini dönüştürüyoruz
+          price: item.price,
+          currency: item.currency,
           icon: item.icon,
           name: item.name,
           market,
@@ -43,31 +43,41 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
 
       case AssetMarket.Commodity:
         return {
-          ticker: item.code, // Commodity'lerde ticker, code ile eşleştiriliyor
-          price: item.price, // Fiyatı sayıya çeviriyoruz
-          currency: Currency.TRY, // Komoditeler için genellikle TRY kullanılıyor
-          icon: "", // Commodity'lerde icon olmayabilir
+          ticker: item.code,
+          price: item.price,
+          currency: Currency.TRY,
+          icon: "",
           name: item.name,
           market,
         };
 
       case AssetMarket.Exchange:
         return {
-          ticker: item.code, // Dövizler için ticker, code ile eşleştiriliyor
-          price: parseFloat(item.sell.replace(",", ".")), // Sell değeri price olarak alınacak
-          currency: Currency.TRY, // Dolar/TL örneğinde TRY kullanılıyor
-          icon: getCountryFlag(item.code), // Exchange verisinde genellikle icon yok
+          ticker: item.code,
+          price: item.price,
+          currency: Currency.TRY,
+          icon: item.icon,
           name: item.name,
           market,
         };
 
       case AssetMarket.Fund:
         return {
-          ticker: item.fundCode.replace("(", ""), // Fonlarda ticker, fundCode ile eşleştiriliyor
-          price: parseFloat(item.price.replace(",", ".")), // Fiyatı sayıya çeviriyoruz
-          currency: Currency.TRY, // Fonlar için genellikle TRY kullanılıyor
-          icon: "", // Fonlarda genellikle icon yok
+          ticker: item.fundCode,
+          price: item.fundPrice,
+          currency: Currency.TRY,
+          icon: "",
           name: item.fundName,
+          market,
+        };
+
+      case AssetMarket.Indicies:
+        return {
+          ticker: item.ticker,
+          price: item.price,
+          currency: Currency.USD,
+          icon: item.icon,
+          name: item.name,
           market,
         };
 
@@ -101,7 +111,7 @@ const updateAssetPrices = async (data: any[], market: AssetMarket) => {
 
 // fetchMarketData fonksiyonunda update işlemi
 export const fetchMarketData = async () => {
-  const [usaStocks, trStocks, crypto, commodities, exchange, funds] =
+  const [usaStocks, trStocks, crypto, commodities, exchange, funds, indicies] =
     await Promise.all([
       fetchUsaStocks(), // USA borsası verisi
       fetchTRStocks(), // BIST100 verisi
@@ -109,6 +119,7 @@ export const fetchMarketData = async () => {
       scrapeGoldPrices(), // Altın fiyatları
       fetchExchange(), // Dolar/TL gibi döviz kurları
       fetchFunds(), // Fonlar verisi
+      fetchIndices(), // Endeksler
     ]);
 
   // Verileri güncellemek için her marketi iterasyona sokuyoruz
@@ -119,6 +130,7 @@ export const fetchMarketData = async () => {
     updateAssetPrices(commodities, AssetMarket.Commodity),
     updateAssetPrices(exchange, AssetMarket.Exchange),
     updateAssetPrices(funds, AssetMarket.Fund),
+    updateAssetPrices(indicies, AssetMarket.Indicies),
   ]);
 
   return {
@@ -128,6 +140,7 @@ export const fetchMarketData = async () => {
     commodities,
     exchange,
     funds,
+    indicies,
   };
 };
 

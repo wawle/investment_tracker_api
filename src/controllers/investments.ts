@@ -5,6 +5,7 @@ import { AssetMarket, Currency } from "../utils/enums";
 import { roundToTwoDecimalPlaces } from "../utils";
 import Investment, { IInvestment } from "../models/Investment";
 import ErrorResponse from "../utils/errorResponse";
+import History from "../models/History";
 
 // Define the structure for the profit/loss data
 export interface IInvestmentWithProfitLoss {
@@ -21,20 +22,16 @@ export interface IInvestmentWithProfitLoss {
   profitLossPercentage: number;
 }
 
-// Fetch prices for all investments based on the market type
-const fetchInvestmentPrices = async (
-  investments: IInvestment[],
-  targetCurrency: Currency
-): Promise<{
-  investmentDetails: IInvestmentWithProfitLoss[];
-  totalProfitLossByMarket: { [market: string]: number };
-  totalValueByMarket: { [market: string]: number };
-  totalAmountByMarket: { [market: string]: number };
-}> => {
-  const investmentDetails: IInvestmentWithProfitLoss[] = [];
-  const totalProfitLossByMarket: { [market: string]: number } = {};
-  const totalValueByMarket: { [market: string]: number } = {}; // Total value for each market type
-  const totalAmountByMarket: { [market: string]: number } = {}; // Total amount for each market type
+// Function to fetch investment prices with range-based calculations
+export const fetchInvestmentPrices = async (
+  investments: any[],
+  targetCurrency: Currency,
+  range: "daily" | "weekly" | "monthly" | "all"
+) => {
+  const investmentDetails = [];
+  const totalProfitLossByMarket: Record<string, number> = {};
+  const totalValueByMarket: Record<string, number> = {}; // Total value for each market type
+  const totalAmountByMarket: Record<string, number> = {}; // Total amount for each market type
 
   // Create a set of asset IDs from the investments to reduce database queries
   const assetIds = Array.from(
@@ -49,6 +46,27 @@ const fetchInvestmentPrices = async (
     assets,
     targetCurrency
   );
+
+  // Determine the date range based on the range parameter
+  const now = new Date();
+  let startDate: Date;
+  let endDate: Date = now;
+
+  switch (range) {
+    case "daily":
+      startDate = new Date(now.setHours(0, 0, 0, 0));
+      break;
+    case "weekly":
+      startDate = new Date(now.setDate(now.getDate() - 7));
+      break;
+    case "monthly":
+      startDate = new Date(now.setMonth(now.getMonth() - 1));
+      break;
+    case "all":
+    default:
+      startDate = new Date(0); // Epoch time
+      break;
+  }
 
   // Loop through all investments and calculate details
   for (const investment of investments) {
@@ -75,11 +93,21 @@ const fetchInvestmentPrices = async (
     // Convert avg_price as well
     const convertedAvgPrice = avg_price * assetConversionRate;
 
+    // Fetch historical prices for range calculations
+    const histories = await History.find({
+      asset: asset._id,
+      createdAt: { $gte: startDate, $lte: endDate },
+    }).sort({ createdAt: 1 });
+
+    // Use the first and last historical prices in the range
+    const startPrice = histories[0]?.close_price || convertedAvgPrice;
+    const endPrice =
+      histories[histories.length - 1]?.close_price || convertedCurrentPrice;
+
     // Calculate balance and profit/loss in the target currency
-    const balance = amount * convertedCurrentPrice;
-    const profitLoss = balance - amount * convertedAvgPrice;
-    const profitLossPercentage =
-      (profitLoss / (amount * convertedAvgPrice)) * 100;
+    const balance = amount * endPrice;
+    const profitLoss = balance - amount * startPrice;
+    const profitLossPercentage = (profitLoss / (amount * startPrice)) * 100;
 
     // Prepare the result for this investment
     investmentDetails.push({
@@ -90,7 +118,7 @@ const fetchInvestmentPrices = async (
       name: asset.name,
       avgPrice: roundToTwoDecimalPlaces(convertedAvgPrice),
       amount,
-      currentPrice: roundToTwoDecimalPlaces(convertedCurrentPrice),
+      currentPrice: roundToTwoDecimalPlaces(endPrice),
       balance: roundToTwoDecimalPlaces(balance),
       profitLoss: roundToTwoDecimalPlaces(profitLoss),
       profitLossPercentage: roundToTwoDecimalPlaces(profitLossPercentage),
@@ -272,53 +300,65 @@ const groupInvestmentsByMarket = (
 // @desc      Get all investments by account Id, grouped by market type, in the target currency
 // @route     GET /api/v1/investments/prices
 // @access    Public
-export const getInvestmentPrices = asyncHandler(async (req: any, res: any) => {
-  const { currency = "usd", accountId } = req.query;
+export const getInvestmentPrices = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { currency = "usd", accountId, range = "all" } = req.query;
 
-  // Fetch all investments for the accountId and populate asset details
-  const investments = await Investment.find({ account: accountId }).populate(
-    "asset"
-  );
+    if (!accountId) {
+      res.status(400).json({ message: "Account ID is required." });
+      return;
+    }
 
-  if (!investments.length) {
-    return res.status(404).json({ message: "No investments found." });
+    // Fetch all investments for the accountId and populate asset details
+    const investments = await Investment.find({ account: accountId }).populate(
+      "asset"
+    );
+
+    if (!investments.length) {
+      res.status(404).json({ message: "No investments found." });
+      return;
+    }
+
+    // Fetch the prices for the investments in the target currency
+    const { investmentDetails, totalProfitLossByMarket, totalValueByMarket } =
+      await fetchInvestmentPrices(
+        investments,
+        currency as Currency,
+        range as "daily" | "weekly" | "monthly" | "all"
+      );
+
+    // Group the results by asset market type (crypto, usa-stock, etc.) and include total profit/loss and percentage
+    const groupedInvestments = groupInvestmentsByMarket(
+      investmentDetails,
+      totalProfitLossByMarket,
+      totalValueByMarket
+    );
+
+    // Calculate general total profit/loss, balance, and profit/loss percentage
+    let totalProfitLoss = 0;
+    let totalValue = 0;
+    let generalBalance = 0; // Initialize general balance
+
+    // Sum up total profit/loss, total value, and total balance across all markets
+    Object.keys(groupedInvestments).forEach((market) => {
+      totalProfitLoss += groupedInvestments[market].totalProfitLoss;
+      totalValue += totalValueByMarket[market];
+      generalBalance += groupedInvestments[market].totalBalance; // Add balance for each market type
+    });
+
+    // Calculate the general profit/loss percentage
+    const profitLossPercentage =
+      totalValue > 0 ? (totalProfitLoss / totalValue) * 100 : 0;
+
+    // Prepare the final response
+    res.json({
+      investmentPrices: groupedInvestments,
+      totalProfitLoss: roundToTwoDecimalPlaces(totalProfitLoss),
+      profitLossPercentage: roundToTwoDecimalPlaces(profitLossPercentage),
+      generalBalance: roundToTwoDecimalPlaces(generalBalance), // Include general balance
+    });
   }
-
-  // Fetch the prices for the investments in the target currency
-  const { investmentDetails, totalProfitLossByMarket, totalValueByMarket } =
-    await fetchInvestmentPrices(investments, currency);
-
-  // Group the results by asset market type (crypto, usa-stock, etc.) and include total profit/loss and percentage
-  const groupedInvestments = groupInvestmentsByMarket(
-    investmentDetails,
-    totalProfitLossByMarket,
-    totalValueByMarket
-  );
-
-  // Calculate general total profit/loss, balance, and profit/loss percentage
-  let totalProfitLoss = 0;
-  let totalValue = 0;
-  let generalBalance = 0; // Initialize general balance
-
-  // Sum up total profit/loss, total value, and total balance across all markets
-  Object.keys(groupedInvestments).forEach((market) => {
-    totalProfitLoss += groupedInvestments[market].totalProfitLoss;
-    totalValue += totalValueByMarket[market];
-    generalBalance += groupedInvestments[market].totalBalance; // Add balance for each market type
-  });
-
-  // Calculate the general profit/loss percentage
-  const profitLossPercentage =
-    totalValue > 0 ? (totalProfitLoss / totalValue) * 100 : 0;
-
-  // Prepare the final response
-  res.json({
-    investmentPrices: groupedInvestments,
-    totalProfitLoss: roundToTwoDecimalPlaces(totalProfitLoss),
-    profitLossPercentage: roundToTwoDecimalPlaces(profitLossPercentage),
-    generalBalance: roundToTwoDecimalPlaces(generalBalance), // Include general balance
-  });
-});
+);
 
 // @desc      Get all investments
 // @route     GET /api/v1/investments
