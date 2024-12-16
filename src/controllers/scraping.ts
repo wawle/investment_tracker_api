@@ -66,7 +66,6 @@ const updateAssetPrices = async (data: any[], market: AssetMarket) => {
           currency: item.currency,
           name: item.name,
           icon: item.icon,
-          scrapedAt: new Date(),
         },
         { upsert: true, new: true }
       );

@@ -18,7 +18,6 @@ export interface IAsset extends Document {
   icon?: string;
   name: string;
   currency: Currency;
-  scrapedAt: Date;
   setPrice: (currency: Currency, price: number) => void;
 }
 
@@ -49,10 +48,6 @@ const AssetSchema: Schema<IAsset> = new Schema(
         [Currency.EUR]: 0,
         [Currency.USD]: 0,
       },
-    },
-    scrapedAt: {
-      type: Date,
-      default: Date.now(),
     },
     market: {
       type: String,
@@ -92,9 +87,7 @@ AssetSchema.pre("findOneAndUpdate", async function (next) {
     const newPrice = update.price as any;
     const currency = update.currency;
 
-    const currencies = ["EUR", "USD", "TRY"];
     const convertedPrice = await getConvertedPrice(currency, newPrice);
-    console.log({ update, convertedPrice });
 
     // Update the price in the update object directly
     update.price = convertedPrice;

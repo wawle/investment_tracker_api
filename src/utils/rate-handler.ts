@@ -153,7 +153,6 @@ export const getCurrencyAssets = async () => {
             },
             currency: Currency.TRY,
             icon: getCountryFlag("TRY"),
-            scrapedAt: new Date(),
           });
           newAssets.push(newTryAsset);
           return newTryAsset.save();
@@ -171,7 +170,6 @@ export const getCurrencyAssets = async () => {
             },
             currency: Currency.TRY,
             icon: exchange.icon,
-            scrapedAt: new Date(),
           });
           newAssets.push(newAsset);
           return newAsset.save();
