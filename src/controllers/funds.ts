@@ -76,23 +76,26 @@ export async function fetchFunds(): Promise<FundData[]> {
       ),
     ]);
 
-  console.log({ ydi, aet, bgl });
-
-  // Flatten the array of arrays into a single array of FundData
-  const data: FundData[] = [
+  const updatedFunds: FundData[] = [
     ...isbank,
     ...yapikredi,
     ...anadoluemeklilik,
     ...ydi,
     ...aet,
     ...bgl,
-  ].filter((item) => item.fundName && item.fundCode && item.price);
-
-  const updatedFunds = data.map((item) => ({
-    ...item,
-    fundCode: item.fundCode.replace("(", ""),
-    fundPrice: parseFloat(item.price.replace(",", ".")),
-  }));
+  ].reduce<FundData[]>((acc, item) => {
+    if (item.fundName && item.fundCode && item.price) {
+      const fundPrice = parseFloat(item.price.replace(",", "."));
+      if (!isNaN(fundPrice)) {
+        acc.push({
+          ...item,
+          fundCode: item.fundCode.replace("(", ""),
+          fundPrice,
+        });
+      }
+    }
+    return acc;
+  }, []);
 
   return updatedFunds;
 }
@@ -336,7 +339,7 @@ async function fetchFundByTicker(url: string): Promise<FundData[]> {
       const [price = ""] = priceText.split(" ");
 
       return {
-        fundName: fundName.substring(0, 50), // Truncate if necessary
+        fundName: nameText.substring(0, 50), // Truncate if necessary
         fundCode,
         price,
       };

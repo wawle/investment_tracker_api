@@ -3,6 +3,7 @@ import { IAccount } from "./Account";
 import Transaction from "./Transaction";
 import { IAsset, IPrice } from "./Asset";
 import { Currency } from "../utils/enums";
+import { getConvertedPrice } from "../utils/rate-handler";
 
 export interface IInvestment extends Document {
   _id: string;
@@ -40,6 +41,25 @@ const InvestmentSchema: Schema<IInvestment> = new Schema(
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+InvestmentSchema.pre("findOneAndUpdate", async function (next) {
+  // Extract the updated fields from this object to check if 'price' is being updated.
+  const update = this.getUpdate() as IInvestment;
+  const investmentId = (this as any)._conditions._id;
+  const investment = await Investment.findById(investmentId)
+    .select("asset")
+    .populate("asset");
+
+  if (update && investment) {
+    // Update the price in the update object directly
+    update.avg_price = await getConvertedPrice(
+      investment.asset.currency,
+      update.avg_price as any
+    );
+  }
+
+  next(); // Proceed with the update operation
+});
 
 // Cascade delete Investments when a Investment is deleted
 InvestmentSchema.pre("findOneAndDelete", async function (next) {

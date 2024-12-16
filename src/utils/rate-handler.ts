@@ -1,7 +1,7 @@
 import { getCountryFlag } from ".";
-import { AssetMarket, Currency, Market } from "./enums";
+import { AssetMarket, Currency } from "./enums";
 import Asset, { IAsset } from "../models/Asset";
-import { CurrencyRates } from "./currency-converter";
+import { getCurrencyRates } from "./currency-converter";
 import { fetchExchange } from "../controllers/exchange";
 import NodeCache from "node-cache";
 
@@ -18,7 +18,6 @@ export const getRateValues = async (): Promise<{
   );
 
   if (cachedRates) {
-    console.log("Returning cached exchange rates");
     return cachedRates; // Return cached rates if available
   }
 
@@ -71,11 +70,8 @@ const fetchExistingAssets = async () => {
   return existingAssetsFiltered;
 };
 
-export const getAssetPrices = (
-  currency: Currency,
-  price: number,
-  rates: CurrencyRates
-) => {
+export const getConvertedPrice = async (currency: Currency, price: number) => {
+  const rates = await getRates();
   let priceInTRY, priceInUSD, priceInEUR;
 
   // Set price for the related currency and calculate the others
@@ -189,4 +185,10 @@ export const getCurrencyAssets = async () => {
 
   // Return both existing and newly created assets
   return [...existingAssets, ...newAssets];
+};
+
+export const getRates = async () => {
+  const { usdRate, eurRate } = await getRateValues();
+  const rates = getCurrencyRates(usdRate, eurRate);
+  return rates;
 };

@@ -37,7 +37,6 @@ export const priceProvider = async (market: string) => {
         );
 
         if (buttonText === "Load More") {
-          console.log("Load more button found. Clicking...");
           await loadMoreButton.click();
 
           // Wait for new data to load using page.waitForFunction

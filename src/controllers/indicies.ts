@@ -50,7 +50,6 @@ export const fetchIndices = async () => {
         );
 
         if (buttonText === "Load More") {
-          console.log("Load more button found. Clicking...");
           await loadMoreButton.click();
 
           await page.waitForFunction(

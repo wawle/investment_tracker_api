@@ -1,20 +1,26 @@
-import express from 'express';
+import express from "express";
+
+import { protect } from "../middleware/auth";
 import {
-  register,
+  forgotPassword,
   getMe,
-} from '../controllers/auth';
+  login,
+  logout,
+  register,
+  resetPassword,
+  updateDetails,
+  updatePassword,
+} from "../controllers/auth";
 
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
-// Register route
-router.post('/register', register);
-
-// Get current user route 
-router.get('/me/:id', getMe);
+router.post("/register", register);
+router.post("/login", login);
+router.get("/logout", logout);
+router.get("/me", protect, getMe);
+router.put("/updatedetails", protect, updateDetails);
+router.put("/updatepassword", protect, updatePassword);
+router.post("/forgotpassword", forgotPassword);
+router.put("/resetpassword/:resettoken", resetPassword);
 
 export default router;
-
-
-
-
-

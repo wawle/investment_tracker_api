@@ -35,3 +35,9 @@ export enum TransactionType {
   Sell,
   Buy,
 }
+
+export enum Role {
+  User = "user",
+  Manager = "manager",
+  Admin = "admin",
+}

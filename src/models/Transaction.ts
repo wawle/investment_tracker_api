@@ -1,17 +1,16 @@
 import mongoose, { Document, Schema } from "mongoose";
 import Investment, { IInvestment } from "./Investment";
 import { AssetMarket, Currency, TransactionType } from "../utils/enums";
-import { IPrice } from "./Asset"; // Importing IPrice to reference asset prices
-import { getAssetPrices, getCurrencyAssets } from "../utils/rate-handler";
-import ErrorResponse from "../utils/errorResponse";
-import { getCurrencyRates } from "../utils/currency-converter";
+import { IPrice } from "./Asset";
+import { getConvertedPrice } from "../utils/rate-handler";
 
 export interface ITransaction extends Document {
   _id: string;
   investment: IInvestment;
-  price: IPrice; // Track the price for each transaction in different currencies
+  price: IPrice;
   quantity: number;
   type: TransactionType;
+  setPrice: (currency: Currency, price: number) => void;
 }
 
 const TransactionSchema: Schema<ITransaction> = new Schema(
@@ -76,7 +75,7 @@ const getAverageCost = async function (investmentId: string) {
       {
         $project: {
           priceInDefaultCurrency: {
-            $ifNull: [{ $arrayElemAt: [`$price.${defaultCurrency}`, 0] }, 0],
+            $ifNull: ["$price", 0], // Directly use price as it's a number
           },
           quantity: 1,
         },
@@ -93,47 +92,67 @@ const getAverageCost = async function (investmentId: string) {
     ]);
 
     if (!result) {
-      console.log("No transactions found for this investment.");
       return;
     }
 
     const { totalAmount, totalQuantity } = result;
-
+    console.log({ result, defaultCurrency });
     // Calculate the average cost
     if (totalQuantity > 0) {
-      const averageCost = totalAmount / totalQuantity;
-
-      // Fetch currency assets for USD and EUR to get conversion rates
-      const [EURAsset, USDAsset] = await getCurrencyAssets();
-
-      if (!USDAsset?.price.try || !EURAsset?.price.try) {
-        return new ErrorResponse("USDAsset or EURAsset not found", 404);
-      }
-
-      // Extract conversion rates for USD and EUR to TRY
-      const usdRate = USDAsset.price.try;
-      const eurRate = EURAsset.price.try;
-      const rates = getCurrencyRates(usdRate, eurRate);
-
-      // Convert the average cost into the appropriate currencies
-      const avg_price = getAssetPrices(defaultCurrency, averageCost, rates);
+      const avg_price = totalAmount / totalQuantity;
 
       // Update the investment with the calculated average cost and quantity
       await Investment.findByIdAndUpdate(investmentId, {
-        avg_price: avg_price,
+        avg_price,
         amount: totalQuantity,
       });
 
-      console.log("Average cost updated:", averageCost);
+      console.log("Average cost updated:", avg_price);
     }
   } catch (error) {
     console.error("Error calculating average cost:", error);
   }
 };
 
+// Custom setter for the price field to handle conversion logic
+TransactionSchema.methods.setPrice = async function (
+  currency: Currency,
+  price: number
+) {
+  // Update the price object with the calculated values
+  this.price = await getConvertedPrice(currency, price);
+};
+
 // Call getAverageCost after save
 TransactionSchema.post("save", async function () {
+  const invesment = await Investment.findById(this.investment)
+    .select("asset")
+    .populate("asset");
+
+  if (!invesment) return;
+  this.setPrice(invesment?.asset.currency, this.price as any);
   getAverageCost(this.investment as any);
+});
+
+TransactionSchema.pre("findOneAndUpdate", async function (next) {
+  // Extract the updated fields from this object to check if 'price' is being updated.
+  const update = this.getUpdate() as ITransaction;
+  if (update && update.price) {
+    // Assuming `update.price` is the price to be converted and you want to handle currency conversion before update.
+    const newPrice = update.price as any;
+    // Find related asses
+    const investment = await Investment.findById(update.investment)
+      .select("asset")
+      .populate("asset");
+
+    if (!investment) return next();
+    const currency = investment.asset.currency;
+
+    // Update the price in the update object directly
+    update.price = await getConvertedPrice(currency, newPrice);
+  }
+
+  next(); // Proceed with the update operation
 });
 
 // Call getAverageCost after update

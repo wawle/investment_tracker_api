@@ -12,13 +12,21 @@ import { fetchTRStocks, fetchUsaStocks } from "./stocks";
 const mapDataToAsset = (data: any[], market: AssetMarket) => {
   return data.map((item) => {
     let currency: Currency;
+    let price = item.price;
 
     // Default currency based on asset market
     switch (market) {
       case AssetMarket.TRStock:
+        currency = Currency.TRY;
+        break;
       case AssetMarket.Exchange:
-      case AssetMarket.Fund:
+        currency = Currency.TRY;
+        break;
       case AssetMarket.Commodity:
+        currency = Currency.TRY;
+        break;
+      case AssetMarket.Fund:
+        price = item.fundPrice;
         currency = Currency.TRY;
         break;
       case AssetMarket.USAStock:
@@ -31,7 +39,7 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
     }
     return {
       ticker: item.ticker || item.code || item.fundCode, // Handle multiple field names for ticker
-      price: item.price, // Assuming `price` contains the base currency prices (e.g., TRY, USD, EUR)
+      price, // Assuming `price` contains the base currency prices (e.g., TRY, USD, EUR)
       currency: currency,
       icon: item.icon || "", // Default empty string if not provided
       name: item.name || item.fundName || "", // Handle multiple field names for name
@@ -131,7 +139,6 @@ export const getMarketData = async (req: Request, res: any) => {
       data,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       error: "An error occurred while fetching market data.",
     });

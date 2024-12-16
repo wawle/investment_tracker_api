@@ -1,8 +1,7 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 import { AssetMarket, Currency } from "../utils/enums";
 import History from "./History";
-import { CurrencyRates, getCurrencyRates } from "../utils/currency-converter";
-import { getAssetPrices, getRateValues } from "../utils/rate-handler";
+import { getConvertedPrice } from "../utils/rate-handler";
 
 // Define a type for the price object
 export interface IPrice {
@@ -20,13 +19,7 @@ export interface IAsset extends Document {
   name: string;
   currency: Currency;
   scrapedAt: Date;
-  // Add setPrice method
-  setPrice: (currency: Currency, price: number, rates: CurrencyRates) => void;
-}
-
-// Create a new interface that extends Mongoose's Model type
-interface IAssetModel extends Model<IAsset> {
-  updatePricesForAllAssets(usdRate: number, eurRate: number): Promise<IAsset[]>;
+  setPrice: (currency: Currency, price: number) => void;
 }
 
 const AssetSchema: Schema<IAsset> = new Schema(
@@ -77,40 +70,18 @@ const AssetSchema: Schema<IAsset> = new Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-AssetSchema.statics.updatePricesForAllAssets = async function (
-  usdRate: number,
-  eurRate: number
-) {
-  const allAssets = await Asset.find(); // `this` refers to the model here
-  const rates = getCurrencyRates(usdRate, eurRate);
-
-  allAssets.forEach((asset) => {
-    asset.setPrice(asset.currency, asset.price[asset.currency], rates);
-  });
-
-  // Save all updated assets
-  await Promise.all(allAssets.map((asset) => asset.save()));
-
-  return allAssets;
-};
-
 // Custom setter for the price field to handle conversion logic
-AssetSchema.methods.setPrice = function (
+AssetSchema.methods.setPrice = async function (
   currency: Currency,
-  price: number,
-  rates: CurrencyRates
+  price: number
 ) {
-  const convertedPrice = getAssetPrices(currency, price, rates);
-
   // Update the price object with the calculated values
-  this.price = convertedPrice;
+  this.price = await getConvertedPrice(currency, price);
 };
 
 // Cascade delete Historys when a History is deleted
 AssetSchema.post("save", async function () {
-  const { usdRate, eurRate } = await getRateValues();
-  const rates = getCurrencyRates(usdRate, eurRate);
-  this.setPrice(this.currency, this.price as any, rates);
+  this.setPrice(this.currency, this.price as any);
 });
 
 AssetSchema.pre("findOneAndUpdate", async function (next) {
@@ -120,10 +91,11 @@ AssetSchema.pre("findOneAndUpdate", async function (next) {
     // Assuming `update.price` is the price to be converted and you want to handle currency conversion before update.
     const newPrice = update.price as any;
     const currency = update.currency;
-    const { usdRate, eurRate } = await getRateValues();
-    const rates = getCurrencyRates(usdRate, eurRate); // Fetch the latest currency rates.
-    // Convert the price
-    const convertedPrice = getAssetPrices(currency, newPrice, rates);
+
+    const currencies = ["EUR", "USD", "TRY"];
+    const convertedPrice = await getConvertedPrice(currency, newPrice);
+    console.log({ update, convertedPrice });
+
     // Update the price in the update object directly
     update.price = convertedPrice;
   }
@@ -152,6 +124,6 @@ AssetSchema.virtual("histories", {
 });
 
 // Create and export the model with the augmented static type
-const Asset = mongoose.model<IAsset, IAssetModel>("Asset", AssetSchema);
+const Asset = mongoose.model<IAsset>("Asset", AssetSchema);
 
 export default Asset;

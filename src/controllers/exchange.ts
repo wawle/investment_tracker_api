@@ -84,7 +84,7 @@ export const getExchanges = asyncHandler(
 // @route     GET /api/v1/exchange/rates
 // @access    Public
 export const getExchangeRates = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { usdRate, eurRate } = await getRateValues();
     const rates = getCurrencyRates(usdRate, eurRate);
 
