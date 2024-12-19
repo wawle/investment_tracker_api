@@ -138,6 +138,7 @@ export const getMarketData = async (req: Request, res: any) => {
       data,
     });
   } catch (error) {
+    console.log(error);
     res.status(500).json({
       error: "An error occurred while fetching market data.",
     });
