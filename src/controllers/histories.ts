@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import asyncHandler from "../middleware/async";
 import ErrorResponse from "../utils/errorResponse";
-import constants from "../utils/constants";
 import History from "../models/History";
 
 // @desc      Get all histories

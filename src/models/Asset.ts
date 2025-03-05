@@ -14,10 +14,16 @@ export interface IAsset extends Document {
   _id: string;
   ticker: string;
   market: AssetMarket;
-  price: IPrice;
+  price: {
+    try: number;
+    usd: number;
+    eur: number;
+  };
   icon?: string;
   name: string;
   currency: Currency;
+  createdAt: Date;
+  updatedAt: Date;
   setPrice: (currency: Currency, price: number) => void;
 }
 
@@ -25,7 +31,8 @@ const AssetSchema: Schema<IAsset> = new Schema(
   {
     ticker: {
       type: String,
-      required: [true, "Please add a ticker"],
+      required: [true, "Lütfen ticker giriniz"],
+      unique: false,
     },
     icon: {
       type: String,
@@ -33,33 +40,31 @@ const AssetSchema: Schema<IAsset> = new Schema(
     },
     name: {
       type: String,
-      required: [true, "Please add a name"],
+      required: [true, "Lütfen isim giriniz"],
     },
     currency: {
       type: String,
-      enum: [Currency.EUR, Currency.TRY, Currency.USD],
-      default: Currency.TRY,
+      enum: Object.values(Currency),
+      required: [true, "Lütfen currency giriniz"],
     },
     price: {
-      type: Object,
-      required: true,
-      default: {
-        [Currency.TRY]: 0,
-        [Currency.EUR]: 0,
-        [Currency.USD]: 0,
+      try: {
+        type: Number,
+        required: true,
+      },
+      usd: {
+        type: Number,
+        required: true,
+      },
+      eur: {
+        type: Number,
+        required: true,
       },
     },
     market: {
       type: String,
-      enum: [
-        AssetMarket.Commodity,
-        AssetMarket.Crypto,
-        AssetMarket.Exchange,
-        AssetMarket.Fund,
-        AssetMarket.TRStock,
-        AssetMarket.USAStock,
-      ],
-      required: true,
+      enum: Object.values(AssetMarket),
+      required: [true, "Lütfen market giriniz"],
     },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }

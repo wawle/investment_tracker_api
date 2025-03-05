@@ -56,7 +56,14 @@ export async function scrapeGoldPrices() {
         );
         return { name, alis, satis, price: convertedPrice };
       })
-      .filter((item) => item.price !== null && item.price !== undefined); // Filter out invalid 'price' values
+      .filter(
+        (item) =>
+          item.price !== null &&
+          item.price !== undefined &&
+          !item.name.includes("Euro") &&
+          !item.name.includes("$") &&
+          !item.name.includes("EURO")
+      ); // Filter out invalid 'price' values
   });
 
   // Close the browser
@@ -80,7 +87,7 @@ export async function scrapeGoldPrices() {
     // Add the unique code to the set and the item
     generatedCodes.add(uniqueCode);
 
-    return { ...item, code: uniqueCode };
+    return { ...item, ticker: uniqueCode };
   });
   return updatedPrices;
 }

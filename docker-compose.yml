@@ -4,35 +4,18 @@ services:
     ports:
       - "4000:4000"
     environment:
-      - MONGO_URI=mongodb://mongo:27017/investment-tracker
-    depends_on:
-      - mongo
+      - MONGO_URI=${MONGO_URI}
     networks:
       - mynetwork
     deploy:
       resources:
         limits:
-          cpus: "2.0" # Maximum 2 CPUs (since you only have 2 available)
-          memory: 8G # 8 GB RAM
+          cpus: "2.0"
+          memory: 8G
         reservations:
-          cpus: "1.0" # Reserve 1 CPU
-          memory: 4G # Reserve 4 GB RAM
-
-  mongo:
-    image: mongo:latest
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - mynetwork
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5" # 0.5 CPU
-          memory: 1G # 1 GB RAM
+          cpus: "1.0"
+          memory: 4G
 
 networks:
   mynetwork:
     driver: bridge
-
-volumes:
-  mongo_data:

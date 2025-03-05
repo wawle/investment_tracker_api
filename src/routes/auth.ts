@@ -2,7 +2,6 @@ import express from "express";
 
 import { protect } from "../middleware/auth";
 import {
-  forgotPassword,
   getMe,
   login,
   logout,
@@ -11,6 +10,7 @@ import {
   updateDetails,
   updatePassword,
 } from "../controllers/auth";
+import { sendVerificationCodeSMS } from "../controllers/sms";
 
 const router = express.Router({ mergeParams: true });
 
@@ -20,7 +20,7 @@ router.get("/logout", logout);
 router.get("/me", protect, getMe);
 router.put("/updatedetails", protect, updateDetails);
 router.put("/updatepassword", protect, updatePassword);
-router.post("/forgotpassword", forgotPassword);
-router.put("/resetpassword/:resettoken", resetPassword);
+router.post("/forgotpassword", sendVerificationCodeSMS);
+router.put("/resetpassword", resetPassword);
 
 export default router;

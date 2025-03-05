@@ -71,22 +71,30 @@ const getAverageCost = async function (investmentId: string) {
 
     // Use Mongoose aggregation to calculate totalAmount and totalQuantity
     const [result] = await Transaction.aggregate([
-      { $match: { investment: new mongoose.Types.ObjectId(investmentId) } }, // Match transactions for this investment
+      { $match: { investment: new mongoose.Types.ObjectId(investmentId) } },
       {
         $project: {
           priceInDefaultCurrency: {
-            $ifNull: ["$price", 0], // Directly use price as it's a number
+            $ifNull: ["$price", 0],
           },
-          quantity: 1,
+          adjustedQuantity: {
+            $cond: {
+              if: { $eq: ["$type", TransactionType.Buy] },
+              then: "$quantity",
+              else: { $multiply: ["$quantity", -1] },
+            },
+          },
         },
       },
       {
         $group: {
           _id: null,
           totalAmount: {
-            $sum: { $multiply: ["$priceInDefaultCurrency", "$quantity"] },
+            $sum: {
+              $multiply: ["$priceInDefaultCurrency", "$adjustedQuantity"],
+            },
           },
-          totalQuantity: { $sum: "$quantity" },
+          totalQuantity: { $sum: "$adjustedQuantity" },
         },
       },
     ]);
@@ -96,7 +104,7 @@ const getAverageCost = async function (investmentId: string) {
     }
 
     const { totalAmount, totalQuantity } = result;
-    console.log({ result, defaultCurrency });
+
     // Calculate the average cost
     if (totalQuantity > 0) {
       const avg_price = totalAmount / totalQuantity;
@@ -123,15 +131,21 @@ TransactionSchema.methods.setPrice = async function (
   this.price = await getConvertedPrice(currency, price);
 };
 
+TransactionSchema.pre("save", async function (next) {
+  const invesment = await Investment.findById(this.investment)
+    .select("asset")
+    .populate("asset");
+  if (!invesment) return;
+  getAverageCost(this.investment as any);
+});
+
 // Call getAverageCost after save
 TransactionSchema.post("save", async function () {
   const invesment = await Investment.findById(this.investment)
     .select("asset")
     .populate("asset");
-
   if (!invesment) return;
   this.setPrice(invesment?.asset.currency, this.price as any);
-  getAverageCost(this.investment as any);
 });
 
 TransactionSchema.pre("findOneAndUpdate", async function (next) {

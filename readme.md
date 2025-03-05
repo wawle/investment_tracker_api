@@ -24,12 +24,13 @@ yarn start
 
 ## Demo
 
-The API is live at [investment-tracker.devinbi.com](https://investment-tracker.devinbi.com)
+The API is live at [invesbi.devinbi.com](https://invesbi.devinbi.com)
 
 Extensive documentation with examples [here](https://api.devinbi.com)
 
 - Version: 1.0.0
 - License: MIT
 - Author: Berkay Yucel
-"# investment_tracker_api" 
+  "# investment_tracker_api"
+
 # investment_tracker_api

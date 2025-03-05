@@ -32,8 +32,8 @@ export enum AssetMarket {
 }
 
 export enum TransactionType {
-  Sell,
   Buy,
+  Sell,
 }
 
 export enum Role {

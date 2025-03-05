@@ -30,7 +30,7 @@ import indiciesRouter from "./routes/indicies";
 import commoditiesRouter from "./routes/commodities";
 import scrapingRouter from "./routes/scraping";
 import historiesRouter from "./routes/histories";
-
+import smsRouter from "./routes/sms";
 const app = express();
 
 // Body parser
@@ -90,6 +90,8 @@ app.use("/api/v1/investments", investmentsRouter);
 app.use("/api/v1/scraping", scrapingRouter);
 // histories
 app.use("/api/v1/histories", historiesRouter);
+// sms
+app.use("/api/v1/sms", smsRouter);
 
 // jobs
 startScheduler();
@@ -99,7 +101,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;
 
-const server = app.listen(PORT, () =>
+app.listen(PORT, () =>
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`)
 );
 

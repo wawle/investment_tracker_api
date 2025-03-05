@@ -5,6 +5,8 @@ import {
   createInvestment,
   updateInvestment,
   deleteInvestment,
+  proTotalBalance,
+  proMarketBalance,
 } from "../controllers/investments";
 import advancedResults from "../middleware/advancedResults";
 import Investment from "../models/Investment";
@@ -15,10 +17,20 @@ const router = express.Router({ mergeParams: true });
 // Get all Investments and create Investment
 router
   .route("/")
-  .get(advancedResults(Investment as any), getInvestments)
+  .get(
+    advancedResults(Investment as any, {
+      path: "asset",
+      select: "name price ticker market",
+    }),
+    getInvestments
+  )
   .post(createInvestment);
 
 router.route("/prices").get(getInvestmentPrices);
+
+router.route("/total-balance").get(proTotalBalance);
+
+router.route("/market-balance").get(proMarketBalance);
 
 // Get single Investment, update Investment, delete Investment
 router

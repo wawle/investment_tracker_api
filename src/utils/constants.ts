@@ -208,4 +208,75 @@ export default {
       currency: "THB", // Thai Baht
     },
   ],
+  tradingview_endpoints: {
+    markets: {
+      indicies: {
+        all: "https://tradingview.com/markets/indices/quotes-all",
+      },
+      tr: {
+        stocks: {
+          all: "https://tradingview.com/markets/stocks-turkey/market-movers-all-stocks",
+          bist100: "https://tradingview.com/symbols/BIST-XU100/components",
+          bist30: "https://www.tradingview.com/symbols/BIST-XU030/components",
+          bist50: "https://tradingview.com/symbols/BIST-XU50/components",
+          tum100: "https://tradingview.com/symbols/BIST-XTUMY/components",
+          finance:
+            "https://tradingview.com/markets/stocks-turkey/sectorandindustry-sector/finance",
+          bankBroker:
+            "https://tradingview.com/markets/stocks-turkey/sectorandindustry-industry/investment-banks-brokers",
+          technology:
+            "https://tradingview.com/markets/stocks-turkey/sectorandindustry-sector/technology-services",
+          industry:
+            "https://tradingview.com/markets/stocks-turkey/sectorandindustry-industry/investment-trusts-mutual-funds",
+          electronic:
+            "https://tradingview.com/markets/stocks-turkey/sectorandindustry-industry/electronic-production-equipment",
+          logistics:
+            "https://tradingview.com/markets/stocks-turkey/sectorandindustry-industry/logistics",
+          energy:
+            "https://tradingview.com/markets/stocks-turkey/sectorandindustry-industry/energy",
+          healthcare:
+            "https://tradingview.com/markets/stocks-turkey/sectorandindustry-industry/healthcare",
+          realEstate:
+            "https://tradingview.com/markets/stocks-turkey/sectorandindustry-industry/real-estate",
+          consumer:
+            "https://tradingview.com/markets/stocks-turkey/sectorandindustry-industry/consumer-goods",
+          industrials:
+            "https://tradingview.com/markets/stocks-turkey/sectorandindustry-industry/industrials",
+        },
+      },
+      usa: {
+        stocks: {
+          all: "https://tradingview.com/markets/stocks-usa/market-movers-all-stocks/",
+          nasdaq: "https://tradingview.com/symbols/NASDAQ-NDX/components",
+          sp500: "https://tradingview.com/symbols/SPX/components/?exchange=SP",
+          dowJones: "https://tradingview.com/symbols/DJ-DJI/components",
+          tech: "https://tradingview.com/markets/stocks-usa/sectorandindustry-sector/technology",
+          finance:
+            "https://tradingview.com/markets/stocks-usa/sectorandindustry-sector/finance",
+          industry:
+            "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/investment-trusts-mutual-funds",
+          consumer:
+            "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/consumer-goods",
+          industrials:
+            "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/industrials",
+          energy:
+            "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/energy",
+          healthcare:
+            "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/healthcare",
+          realEstate:
+            "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/real-estate",
+          utilities:
+            "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/utilities",
+          telecom:
+            "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/telecom",
+        },
+        etf: {
+          all: "https://www.tradingview.com/markets/etfs/funds-usa/",
+        },
+      },
+      crypto: {
+        all: "https://www.tradingview.com/markets/cryptocurrencies/prices-all",
+      },
+    },
+  },
 };

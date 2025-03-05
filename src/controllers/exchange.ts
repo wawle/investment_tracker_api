@@ -28,7 +28,7 @@ export const fetchExchange = async (): Promise<
 
   const exchange = exchangeRates
     ?.map((item: any) => ({
-      code: item["$"].CurrencyCode,
+      ticker: item["$"].CurrencyCode,
       name: item.Isim,
       currency_name: item.CurrencyName,
       buy: item.BanknoteBuying,
@@ -38,7 +38,7 @@ export const fetchExchange = async (): Promise<
     }))
     .filter(
       (item: {
-        code: string;
+        ticker: string;
         name: string;
         currency_name: string;
         buy: string;
@@ -64,7 +64,7 @@ export const getExchanges = asyncHandler(
             exchange.name
               .toLowerCase()
               .includes((search as string).toLowerCase()) ||
-            exchange.code
+            exchange.ticker
               .toLowerCase()
               .includes((search as string).toLowerCase()) ||
             exchange.currency_name

@@ -17,8 +17,8 @@ export const getFunds = asyncHandler(
     const filteredData = search
       ? data.filter(
           (fund) =>
-            fund.fundName.toLowerCase().includes(search.toLowerCase()) ||
-            fund.fundCode.toLowerCase().includes(search.toLowerCase())
+            fund.name.toLowerCase().includes(search.toLowerCase()) ||
+            fund.ticker.toLowerCase().includes(search.toLowerCase())
         )
       : data;
 
@@ -53,8 +53,8 @@ export const getFundByTicker = asyncHandler(
 );
 
 interface FundData {
-  fundName: string;
-  fundCode: string;
+  name: string;
+  ticker: string;
   price: string;
   fundPrice?: number;
 }
@@ -84,12 +84,11 @@ export async function fetchFunds(): Promise<FundData[]> {
     ...aet,
     ...bgl,
   ].reduce<FundData[]>((acc, item) => {
-    if (item.fundName && item.fundCode && item.price) {
+    if (item.name && item.ticker && item.price) {
       const fundPrice = parseFloat(item.price.replace(",", "."));
       if (!isNaN(fundPrice)) {
         acc.push({
           ...item,
-          fundCode: item.fundCode.replace("(", ""),
           fundPrice,
         });
       }
@@ -122,9 +121,9 @@ async function fetchIsBankFunds(): Promise<FundData[]> {
   const fundData: FundData[] = await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll("tbody tr"));
     return rows.map((row) => {
-      const fundName =
+      const name =
         row.querySelector("td a.fund-name")?.textContent?.trim() ?? "";
-      const fundCode =
+      const ticker =
         row.querySelector("td .table-code")?.textContent?.trim() ?? "";
 
       // Extract the unit share price from the third <td> element (second column)
@@ -137,7 +136,7 @@ async function fetchIsBankFunds(): Promise<FundData[]> {
       price = price.replace(/[\n\r\t]+/g, "").trim();
 
       // Return the cleaned-up data
-      return { fundName, fundCode, price };
+      return { name, ticker, price };
     });
   });
 
@@ -173,11 +172,11 @@ async function fetchYapiKrediBankFunds(): Promise<FundData[]> {
     const rows = Array.from(document.querySelectorAll("tbody tr"));
     return rows.map((row) => {
       // Extract fund code from the first <td> link (the part before the "/")
-      const fundCode =
+      const ticker =
         row.querySelector("td a")?.textContent?.split(" /")[0]?.trim() ?? "";
 
       // Extract fund name from the second <td> link
-      const fundName =
+      const name =
         row.querySelector("td:nth-of-type(2) a")?.textContent?.trim() ?? "";
 
       // Extract unit share price from the third <td> element
@@ -188,7 +187,7 @@ async function fetchYapiKrediBankFunds(): Promise<FundData[]> {
           .split("\n")[0] ?? "";
 
       // Return the cleaned-up data
-      return { fundCode, fundName, price };
+      return { name, ticker, price };
     });
   });
 
@@ -224,12 +223,12 @@ async function fetchAkBankFunds(): Promise<FundData[]> {
     const rows = Array.from(document.querySelectorAll(".box-row"));
     return rows.map((row) => {
       // Extract fund code from column 0 (the <a> tag inside box-col-label)
-      const fundCode =
+      const ticker =
         row.querySelector("div.box-col.box-col-label a")?.textContent?.trim() ??
         "";
 
       // Extract fund name from column 2 (the <a> tag inside box-col-main)
-      const fundName =
+      const name =
         row.querySelector("div.box-col.box-col-main a")?.textContent?.trim() ??
         "";
 
@@ -240,7 +239,7 @@ async function fetchAkBankFunds(): Promise<FundData[]> {
           ?.textContent?.trim() ?? "";
 
       // Return the cleaned-up data
-      return { fundCode, fundName, price };
+      return { ticker, name, price };
     });
   });
 
@@ -281,14 +280,14 @@ async function getFundInfo(code: string): Promise<FundData> {
     const h1Text = document.querySelector("h1")?.textContent?.trim();
 
     if (!h1Text) {
-      return { fundCode: "", fundName: "", price: "0" };
+      return { ticker: "", name: "", price: "0" };
     }
 
     // Split the text to get the fund code and fund name
-    const [fundCode, ...fundNameArray] = h1Text.split(" - ");
+    const [ticker, ...nameArray] = h1Text.split(" - ");
 
     // Join the fund name back together if there are multiple words after the dash
-    const fundName = fundNameArray.join(" ");
+    const name = nameArray.join(" ");
 
     // Select the price inside the <p> tag in the <li> with class "bg-white"
     const priceElement = document.querySelector(
@@ -297,7 +296,7 @@ async function getFundInfo(code: string): Promise<FundData> {
     const price = priceElement?.textContent?.trim() || "0";
 
     // Return the fund data object
-    return { fundName, fundCode, price };
+    return { name, ticker, price };
   });
 
   // Close the browser
@@ -329,7 +328,7 @@ async function fetchFundByTicker(url: string): Promise<FundData[]> {
       const nameText = nameElement?.textContent?.trim() || "";
 
       // Split the text into ticker and name
-      const [fundCode = "", fundName = ""] = nameText
+      const [ticker = "", name = ""] = nameText
         .split(" - ")
         .map((s) => s.trim());
 
@@ -339,8 +338,8 @@ async function fetchFundByTicker(url: string): Promise<FundData[]> {
       const [price = ""] = priceText.split(" ");
 
       return {
-        fundName: nameText.substring(0, 50), // Truncate if necessary
-        fundCode,
+        name: nameText.substring(0, 50), // Truncate if necessary
+        ticker,
         price,
       };
     });

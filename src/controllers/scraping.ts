@@ -7,6 +7,9 @@ import { fetchExchange } from "./exchange";
 import { fetchFunds } from "./funds";
 import { fetchIndices } from "./indicies";
 import { fetchTRStocks, fetchUsaStocks } from "./stocks";
+import constants from "../utils/constants";
+import { advancedPriceProvider } from "../utils/advanced-price-provider";
+import { getConvertedPrice } from "../utils/rate-handler";
 
 // Her market türü için verileri eşleştiren fonksiyon
 const mapDataToAsset = (data: any[], market: AssetMarket) => {
@@ -38,11 +41,11 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
         throw new Error(`Unknown market type: ${market}`);
     }
     return {
-      ticker: item.ticker || item.code || item.fundCode, // Handle multiple field names for ticker
+      ticker: item.ticker, // Handle multiple field names for ticker
       price, // Assuming `price` contains the base currency prices (e.g., TRY, USD, EUR)
       currency: currency,
       icon: item.icon || "", // Default empty string if not provided
-      name: item.name || item.fundName || "", // Handle multiple field names for name
+      name: item.name || "", // Handle multiple field names for name
       market,
     };
   });
@@ -54,94 +57,223 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
  * @param market - The market for the assets
  */
 const updateAssetPrices = async (data: any[], market: AssetMarket) => {
-  const assetsToUpdate = mapDataToAsset(data, market);
-  await Promise.all(
-    assetsToUpdate.map(async (item) => {
-      // Update asset data in the database
+  if (!data || data.length === 0) {
+    console.log(`${market} için güncellenecek veri bulunamadı`);
+    return;
+  }
 
-      await Asset.findOneAndUpdate(
-        { ticker: item.ticker, market: item.market },
-        {
-          price: item.price,
-          currency: item.currency,
-          name: item.name,
-          icon: item.icon,
+  const assetsToUpdate = mapDataToAsset(data, market);
+  const batchSize = 1000; // Optimum batch boyutu
+  const batches = [];
+
+  // Verileri batch'lere böl ve price dönüşümlerini yap
+  for (let i = 0; i < assetsToUpdate.length; i += batchSize) {
+    const batch = assetsToUpdate.slice(i, i + batchSize);
+
+    // Her bir item için price dönüşümünü yap
+    const processedBatch = await Promise.all(
+      batch.map(async (item) => {
+        const convertedPrice = await getConvertedPrice(
+          item.currency,
+          item.price
+        );
+        return {
+          ...item,
+          price: {
+            try: convertedPrice[Currency.TRY],
+            usd: convertedPrice[Currency.USD],
+            eur: convertedPrice[Currency.EUR],
+          },
+        };
+      })
+    );
+
+    const bulkOps = processedBatch.map((item) => ({
+      updateOne: {
+        filter: { ticker: item.ticker, market: item.market },
+        update: {
+          $set: {
+            ticker: item.ticker,
+            market: item.market,
+            price: item.price,
+            currency: item.currency,
+            name: item.name,
+            icon: item.icon,
+            updatedAt: new Date(),
+          },
         },
-        { upsert: true, new: true }
-      );
-    })
-  );
+        upsert: true,
+      },
+    }));
+    batches.push(bulkOps);
+  }
+
+  try {
+    let totalModified = 0;
+    let totalUpserted = 0;
+
+    // Batch'leri paralel olarak işle
+    await Promise.all(
+      batches.map(async (bulkOps) => {
+        const result = await Asset.bulkWrite(bulkOps, {
+          ordered: false,
+          writeConcern: { w: 1 }, // Write concern ayarı
+        });
+        totalModified += result.modifiedCount;
+        totalUpserted += result.upsertedCount;
+      })
+    );
+
+    console.log(
+      `${market} için toplam ${totalModified} kayıt güncellendi, ${totalUpserted} yeni kayıt eklendi`
+    );
+  } catch (error) {
+    console.error(`${market} verilerini güncellerken hata oluştu:`, error);
+    throw error;
+  }
 };
 
 // fetchMarketData fonksiyonunda update işlemi
 export const fetchMarketData = async () => {
-  const [usaStocks, trStocks, crypto, commodities, exchange, funds, indicies] =
-    await Promise.all([
-      fetchUsaStocks(), // USA borsası verisi
-      fetchTRStocks(), // BIST100 verisi
-      priceProvider(Market.Crypto), // Kripto para verisi
-      scrapeGoldPrices(), // Altın fiyatları
-      fetchExchange(), // Dolar/TL gibi döviz kurları
-      fetchFunds(), // Fonlar verisi
-      fetchIndices(), // Endeksler
-    ]);
+  console.log("market verileri scraping işlemi başladı");
+  const startTime = Date.now();
 
-  // Verileri güncellemek için her marketi iterasyona sokuyoruz
-  await Promise.all([
-    updateAssetPrices(usaStocks, AssetMarket.USAStock),
-    updateAssetPrices(trStocks, AssetMarket.TRStock),
-    updateAssetPrices(crypto, AssetMarket.Crypto),
-    updateAssetPrices(commodities, AssetMarket.Commodity),
-    updateAssetPrices(exchange, AssetMarket.Exchange),
-    updateAssetPrices(funds, AssetMarket.Fund),
-    updateAssetPrices(indicies, AssetMarket.Indicies),
-  ]);
+  try {
+    // Market verilerini paralel olarak çek ve güncelle
+    const marketOperations = [
+      {
+        fetch: fetchUsaStocks,
+        market: AssetMarket.USAStock,
+        name: "USA Stocks",
+      },
+      {
+        fetch: fetchTRStocks,
+        market: AssetMarket.TRStock,
+        name: "TR Stocks",
+      },
+      {
+        fetch: () => priceProvider(Market.Crypto),
+        market: AssetMarket.Crypto,
+        name: "Crypto",
+      },
+      {
+        fetch: scrapeGoldPrices,
+        market: AssetMarket.Commodity,
+        name: "Commodities",
+      },
+      {
+        fetch: fetchExchange,
+        market: AssetMarket.Exchange,
+        name: "Exchange",
+      },
+      {
+        fetch: fetchFunds,
+        market: AssetMarket.Fund,
+        name: "Funds",
+      },
+      {
+        fetch: fetchIndices,
+        market: AssetMarket.Indicies,
+        name: "Indices",
+      },
+    ];
 
-  return {
-    usaStocks,
-    trStocks,
-    crypto,
-    commodities,
-    exchange,
-    funds,
-    indicies,
-  };
+    const results = await Promise.allSettled(
+      marketOperations.map(async ({ fetch, market, name }) => {
+        try {
+          console.time(`${name} fetch and update`);
+          const data = await fetch();
+          await updateAssetPrices(data, market);
+          console.timeEnd(`${name} fetch and update`);
+          return { name, data, success: true };
+        } catch (error) {
+          console.error(`${name} işlemi başarısız:`, error);
+          return { name, error, success: false };
+        }
+      })
+    );
+
+    const endTime = Date.now();
+    console.log(`Toplam işlem süresi: ${(endTime - startTime) / 1000} saniye`);
+
+    // Başarılı sonuçları filtrele ve response objesi oluştur
+    const response: Record<string, any> = results.reduce((acc, result) => {
+      if (result.status === "fulfilled" && result.value.success) {
+        acc[result.value.name.toLowerCase().replace(" ", "")] =
+          result.value.data;
+      }
+      return acc;
+    }, {} as Record<string, any>);
+
+    console.log("market verileri güncellendi");
+    return response;
+  } catch (error) {
+    console.error("Market verilerini güncellerken kritik hata:", error);
+    throw error;
+  }
 };
 
 // @desc      Get all market data or data for a specific market
 // @route     GET /api/v1/scraping
 // @access    Public
 export const getMarketData = async (req: Request, res: any) => {
-  const { market } = req.query; // Get the market query parameter
+  const { market } = req.query;
 
   try {
-    // If a market is provided, validate it
-    if (market && !Object.values(AssetMarket).includes(market as AssetMarket)) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid market type provided.",
-      });
-    }
-
-    let data;
-
-    if (market) {
-      // If the market query parameter is provided, fetch data for that market
-      data = await fetchMarketDataForSpecificMarket(market as AssetMarket);
-    } else {
-      // If no market query parameter, fetch data for all markets
-      data = await fetchMarketData();
-    }
-
-    res.status(200).json({
+    // İstek hemen cevap versin
+    res.status(202).json({
       success: true,
-      data,
+      message: "Market verilerinin güncellenmesi başlatıldı",
     });
+
+    // Veri güncelleme işlemini arka planda başlat
+    if (market && !Object.values(AssetMarket).includes(market as AssetMarket)) {
+      console.error("Geçersiz market tipi:", market);
+      return;
+    }
+
+    // Veri güncelleme işlemini arka planda yap
+    setTimeout(async () => {
+      try {
+        if (market) {
+          await fetchMarketDataForSpecificMarket(market as AssetMarket);
+        } else {
+          const [
+            usaStocks,
+            trStocks,
+            crypto,
+            commodities,
+            exchange,
+            funds,
+            indicies,
+          ] = await Promise.all([
+            fetchUsaStocks(),
+            fetchTRStocks(),
+            priceProvider(Market.Crypto),
+            scrapeGoldPrices(),
+            fetchExchange(),
+            fetchFunds(),
+            fetchIndices(),
+          ]);
+
+          await Promise.all([
+            updateAssetPrices(usaStocks, AssetMarket.USAStock),
+            updateAssetPrices(trStocks, AssetMarket.TRStock),
+            updateAssetPrices(crypto, AssetMarket.Crypto),
+            updateAssetPrices(commodities, AssetMarket.Commodity),
+            updateAssetPrices(exchange, AssetMarket.Exchange),
+            updateAssetPrices(funds, AssetMarket.Fund),
+            updateAssetPrices(indicies, AssetMarket.Indicies),
+          ]);
+        }
+        console.log("Market verileri başarıyla güncellendi");
+      } catch (error) {
+        console.error("Market verilerini güncellerken hata oluştu:", error);
+      }
+    }, 0);
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      error: "An error occurred while fetching market data.",
-    });
+    console.error("İstek işlenirken hata oluştu:", error);
+    // İstek zaten cevaplandığı için burada res.status() kullanmıyoruz
   }
 };
 
@@ -186,4 +318,19 @@ const fetchMarketDataForSpecificMarket = async (market: AssetMarket) => {
     default:
       throw new Error(`Unknown market type: ${market}`);
   }
+};
+
+export const fetcDataByMarket = async (req: Request, res: any) => {
+  const { market } = req.params; // Get the market query parameter
+
+  const data = await advancedPriceProvider(
+    constants.tradingview_endpoints.markets.tr.stocks.all,
+    1
+  );
+
+  res.status(200).json({
+    success: true,
+    market,
+    data,
+  });
 };

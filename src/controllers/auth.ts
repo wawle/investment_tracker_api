@@ -1,15 +1,15 @@
-import crypto from "crypto";
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import ErrorResponse from "../utils/errorResponse";
 import asyncHandler from "../middleware/async";
-import { sendEmail } from "../utils/send-email";
 import User, { IUserModal } from "../models/User"; // Assuming IUser is the User interface
 import { RequestWithUser } from "../middleware/auth";
+import { sendVerificationCodeSMS } from "./sms";
 
 // Define a type for the request body for registration
 interface RegisterRequestBody {
   fullname: string;
   email: string;
+  phone: string;
   password: string;
 }
 
@@ -23,12 +23,13 @@ interface LoginRequestBody {
 // @route     POST /api/v1/auth/register
 // @access    Public
 export const register = asyncHandler(async (req, res) => {
-  const { fullname, email, password } = req.body;
+  const { fullname, email, phone, password } = req.body as RegisterRequestBody;
 
   // Create user
   const user = await User.create({
     fullname,
     email,
+    phone,
     password,
   });
 
@@ -41,7 +42,7 @@ export const register = asyncHandler(async (req, res) => {
 export const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body as LoginRequestBody;
 
-  // Validate email & password
+  // Validate phone & password
   if (!email || !password) {
     return next(new ErrorResponse("Please provide an email and password", 400));
   }
@@ -137,68 +138,25 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
   sendTokenResponse(user, 200, res);
 });
 
-// @desc      Forgot password
-// @route     POST /api/v1/auth/forgotpassword
-// @access    Public
-export const forgotPassword = asyncHandler(async (req, res, next) => {
-  const user = await User.findOne({ email: req.body.email });
-
-  if (!user) {
-    return next(new ErrorResponse("There is no user with that email", 404));
-  }
-
-  // Get reset token
-  const resetToken = user.getResetPasswordToken();
-
-  await user.save({ validateBeforeSave: false });
-
-  // Create reset URL
-  const resetUrl = `${req.protocol}://${req.get(
-    "host"
-  )}/api/v1/auth/resetpassword/${resetToken}`;
-
-  const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
-
-  try {
-    await sendEmail({
-      email: user.email,
-      subject: "Password reset token",
-      message,
-    });
-
-    res.status(200).json({ success: true, data: "Email sent" });
-  } catch (err) {
-    console.error(err);
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-
-    await user.save({ validateBeforeSave: false });
-
-    return next(new ErrorResponse("Email could not be sent", 500));
-  }
-});
-
 // @desc      Reset password
-// @route     PUT /api/v1/auth/resetpassword/:resettoken
+// @route     PUT /api/v1/auth/resetpassword
 // @access    Public
 export const resetPassword = asyncHandler(async (req, res, next) => {
-  const resetPasswordToken = crypto
-    .createHash("sha256")
-    .update(req.params.resettoken)
-    .digest("hex");
+  const { phone, verificationCode, newPassword } = req.body;
 
   const user = await User.findOne({
-    resetPasswordToken,
-    resetPasswordExpire: { $gt: Date.now() },
+    phone,
+    verificationCode,
+    verificationCodeExpire: { $gt: Date.now() },
   });
 
   if (!user) {
-    return next(new ErrorResponse("Invalid token", 400));
+    return next(new ErrorResponse("Invalid or expired verification code", 400));
   }
 
-  user.password = req.body.password;
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpire = undefined;
+  user.password = newPassword;
+  user.verificationCode = undefined;
+  user.verificationCodeExpire = undefined;
   await user.save();
 
   sendTokenResponse(user, 200, res);
@@ -225,8 +183,17 @@ const sendTokenResponse = (
     options.secure = true;
   }
 
-  res.status(statusCode).cookie("token", token, options).json({
-    success: true,
-    token,
-  });
+  res
+    .status(statusCode)
+    .cookie("token", token, options)
+    .json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        fullname: user.fullname,
+        email: user.email,
+        role: user.role,
+      },
+    });
 };

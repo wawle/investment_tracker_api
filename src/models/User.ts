@@ -9,10 +9,13 @@ export interface IUserModal extends Document {
   _id: string;
   fullname: string;
   email: string;
+  phone: string;
   role: Role;
   password?: string;
   resetPasswordToken?: string;
   resetPasswordExpire?: Date;
+  verificationCode?: string;
+  verificationCodeExpire?: Date;
 
   // Instance methods
   getSignedJwtToken(): string;
@@ -39,6 +42,12 @@ const UserSchema: Schema<IUserModal> = new Schema(
         "Please add a valid email",
       ],
     },
+    phone: {
+      type: String,
+      required: [true, "Please add a phone number"],
+      unique: true,
+      match: [/^\+[1-9]\d{1,14}$/, "Please add a valid phone number"],
+    },
     role: {
       type: String,
       enum: [Role.Admin, Role.Manager, Role.User],
@@ -52,6 +61,8 @@ const UserSchema: Schema<IUserModal> = new Schema(
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    verificationCode: String,
+    verificationCodeExpire: Date,
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } } // createdAt ve updatedAt alanlarını otomatik olarak ekler
 );

@@ -3,7 +3,7 @@ import { Document, Model } from "mongoose";
 
 // `advancedResults` fonksiyonu TypeScript ile
 const advancedResults =
-  (model: Model<Document>, populate?: string) =>
+  (model: Model<Document>, populate?: any) =>
   async (req: Request, res: any, next: NextFunction): Promise<void> => {
     let query;
 
