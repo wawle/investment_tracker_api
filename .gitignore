@@ -8,7 +8,7 @@ package-lock.json
 yarn.lock
 
 # Ignore environment variables file
-#.env
+.env
 
 # Ignore logs
 *.log
