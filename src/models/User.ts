@@ -4,6 +4,9 @@ import { Role } from "../utils/enums";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export interface IUserModal extends Document {
   _id: string;
@@ -70,7 +73,7 @@ const UserSchema: Schema<IUserModal> = new Schema(
 // Sign JWT and return
 UserSchema.methods.getSignedJwtToken = function () {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET as string, {
-    expiresIn: process.env.JWT_EXPIRE as string,
+    expiresIn: process.env.JWT_EXPIRE,
   });
 };
 
