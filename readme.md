@@ -1,6 +1,6 @@
 # Investment Tracker API
 
-> Backend API for Investment Tracker application, which is a bootcamp directory website
+> Backend API for Investment Tracker application
 
 ## Usage
 
@@ -16,7 +16,7 @@ yarn
 
 ```
 # Run in dev mode
-yarn run dev
+yarn dev
 
 # Run in prod mode
 yarn start

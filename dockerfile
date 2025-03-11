@@ -43,6 +43,9 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
+# Step 10: Install Puppeteer and Chromium
+RUN npm install puppeteer --save
+
 # Step 10: Copy compiled JavaScript files from the build image
 COPY --from=build /app/dist /app
 
