@@ -172,7 +172,7 @@ const sendTokenResponse = (
   const options = {
     expires: new Date(
       Date.now() +
-        parseInt(process.env.JWT_COOKIE_EXPIRE || "7") * 24 * 60 * 60 * 1000
+        parseInt(process.env.JWT_EXPIRE as string) * 24 * 60 * 60 * 1000
     ),
     httpOnly: true,
     secure: false,
