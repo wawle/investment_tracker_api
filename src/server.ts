@@ -10,6 +10,7 @@ import hpp from "hpp";
 import cors from "cors";
 import errorHandler from "./middleware/error";
 import connectDB from "./config/db";
+import { setupPuppeteer } from "./utils/setup-puppeteer";
 
 // Load env vars
 const envPath = path.join(__dirname, "config", "config.env");
@@ -34,6 +35,16 @@ if (missingEnvVars.length > 0) {
 
 // Connect to database
 connectDB();
+
+// Setup Puppeteer
+try {
+  setupPuppeteer();
+} catch (error) {
+  console.warn(
+    "Puppeteer kurulumu sırasında hata oluştu, devam ediliyor:",
+    error
+  );
+}
 
 // job files
 import { startDailyJob, startScheduler } from "./utils/scheduler";
