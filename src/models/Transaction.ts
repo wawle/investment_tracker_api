@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from "mongoose";
 import Investment, { IInvestment } from "./Investment";
-import { AssetMarket, Currency, TransactionType } from "../utils/enums";
+import { Currency, TransactionType } from "../utils/enums";
 import { IPrice } from "./Asset";
 import { getConvertedPrice } from "../utils/rate-handler";
 
@@ -49,65 +49,41 @@ const getAverageCost = async function (investmentId: string) {
       "asset"
     );
     const asset = investment?.asset; // Get the associated asset
-    const assetMarket = asset?.market;
-
-    // Determine the default currency based on asset market
-    let defaultCurrency: Currency;
-    switch (assetMarket) {
-      case AssetMarket.TRStock:
-      case AssetMarket.Exchange:
-      case AssetMarket.Fund:
-      case AssetMarket.Commodity:
-        defaultCurrency = Currency.TRY;
-        break;
-      case AssetMarket.USAStock:
-      case AssetMarket.Indicies:
-      case AssetMarket.Crypto:
-        defaultCurrency = Currency.USD;
-        break;
-      default:
-        throw new Error("Unknown asset market.");
-    }
 
     // Use Mongoose aggregation to calculate totalAmount and totalQuantity
-    const [result] = await Transaction.aggregate([
-      { $match: { investment: new mongoose.Types.ObjectId(investmentId) } },
-      {
-        $project: {
-          priceInDefaultCurrency: {
-            $ifNull: ["$price", 0],
-          },
-          adjustedQuantity: {
-            $cond: {
-              if: { $eq: ["$type", TransactionType.Buy] },
-              then: "$quantity",
-              else: { $multiply: ["$quantity", -1] },
-            },
-          },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalAmount: {
-            $sum: {
-              $multiply: ["$priceInDefaultCurrency", "$adjustedQuantity"],
-            },
-          },
-          totalQuantity: { $sum: "$adjustedQuantity" },
-        },
-      },
-    ]);
+    const transactions = await Transaction.find({
+      investment: investmentId,
+    });
 
-    if (!result) {
-      return;
-    }
+    const buyQuantity = transactions.reduce((acc, transaction) => {
+      return (
+        acc +
+        (transaction.type === TransactionType.Buy ? transaction.quantity : 0)
+      );
+    }, 0);
 
-    const { totalAmount, totalQuantity } = result;
+    const sellQuantity = transactions.reduce((acc, transaction) => {
+      return (
+        acc +
+        (transaction.type === TransactionType.Sell ? transaction.quantity : 0)
+      );
+    }, 0);
+
+    const totalQuantity = buyQuantity - sellQuantity;
 
     // Calculate the average cost
     if (totalQuantity > 0) {
-      const avg_price = totalAmount / totalQuantity;
+      const buyTransactions = transactions.filter(
+        (transaction) => transaction.type === TransactionType.Buy
+      );
+
+      const totalValue = buyTransactions.reduce((acc, transaction) => {
+        // Varsayılan para birimi olarak asset'in para birimini kullanıyoruz
+        const price = transaction.price[asset?.currency || Currency.TRY];
+        return acc + price * transaction.quantity;
+      }, 0);
+
+      const avg_price = totalValue / buyQuantity;
 
       // Update the investment with the calculated average cost and quantity
       await Investment.findByIdAndUpdate(investmentId, {
@@ -136,7 +112,7 @@ TransactionSchema.pre("save", async function (next) {
     .select("asset")
     .populate("asset");
   if (!invesment) return;
-  getAverageCost(this.investment as any);
+  await this.setPrice(invesment?.asset.currency, this.price as any);
 });
 
 // Call getAverageCost after save
@@ -145,7 +121,7 @@ TransactionSchema.post("save", async function () {
     .select("asset")
     .populate("asset");
   if (!invesment) return;
-  this.setPrice(invesment?.asset.currency, this.price as any);
+  await getAverageCost(this.investment as any);
 });
 
 TransactionSchema.pre("findOneAndUpdate", async function (next) {

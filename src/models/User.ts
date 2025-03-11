@@ -4,9 +4,6 @@ import { Role } from "../utils/enums";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 export interface IUserModal extends Document {
   _id: string;

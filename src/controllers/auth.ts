@@ -1,9 +1,8 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import ErrorResponse from "../utils/errorResponse";
 import asyncHandler from "../middleware/async";
 import User, { IUserModal } from "../models/User"; // Assuming IUser is the User interface
 import { RequestWithUser } from "../middleware/auth";
-import { sendVerificationCodeSMS } from "./sms";
 
 // Define a type for the request body for registration
 interface RegisterRequestBody {
@@ -15,7 +14,7 @@ interface RegisterRequestBody {
 
 // Define a type for the request body for login
 interface LoginRequestBody {
-  email: string;
+  phone: string;
   password: string;
 }
 
@@ -40,15 +39,15 @@ export const register = asyncHandler(async (req, res) => {
 // @route     POST /api/v1/auth/login
 // @access    Public
 export const login = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body as LoginRequestBody;
+  const { phone, password } = req.body as LoginRequestBody;
 
   // Validate phone & password
-  if (!email || !password) {
-    return next(new ErrorResponse("Please provide an email and password", 400));
+  if (!phone || !password) {
+    return next(new ErrorResponse("Please provide a phone and password", 400));
   }
 
   // Check for user
-  const user = await User.findOne({ email }).select("+password");
+  const user = await User.findOne({ phone }).select("+password");
 
   if (!user) {
     return next(new ErrorResponse("Invalid credentials", 401));

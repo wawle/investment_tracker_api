@@ -1,5 +1,5 @@
+import dotenv from "dotenv";
 import express from "express";
-import "dotenv/config";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import mongoSanitize from "express-mongo-sanitize";
@@ -9,6 +9,9 @@ import hpp from "hpp";
 import cors from "cors";
 import errorHandler from "./middleware/error";
 import connectDB from "./config/db";
+
+// Load env vars
+dotenv.config({ path: "./src/config/config.env" });
 
 // Connect to database
 connectDB();
@@ -31,6 +34,7 @@ import commoditiesRouter from "./routes/commodities";
 import scrapingRouter from "./routes/scraping";
 import historiesRouter from "./routes/histories";
 import smsRouter from "./routes/sms";
+
 const app = express();
 
 // Body parser
