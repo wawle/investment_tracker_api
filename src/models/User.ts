@@ -69,8 +69,8 @@ const UserSchema: Schema<IUserModal> = new Schema(
 
 // Sign JWT and return
 UserSchema.methods.getSignedJwtToken = function () {
-  return jwt.sign({ id: this._id }, process.env.JWT_SECRET as string, {
-    expiresIn: process.env.JWT_EXPIRE as string,
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET as any, {
+    expiresIn: process.env.JWT_EXPIRE as any,
   });
 };
 

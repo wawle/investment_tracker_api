@@ -8,13 +8,13 @@ WORKDIR /app
 COPY package*.json ./
 
 # Step 4: Install project dependencies (including devDependencies)
-RUN npm install
+RUN yarn
 
 # Step 5: Copy the rest of the project files (excluding files listed in .dockerignore)
 COPY . .
 
 # Step 6: Run TypeScript build
-RUN npm run build   
+RUN yarn build   
 
 # Step 7: Create a smaller runtime image (based on a slim version of Node)
 FROM node:23-slim
@@ -44,7 +44,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Step 10: Install Puppeteer and Chromium
-RUN npm install puppeteer --save
+RUN yarn add puppeteer
 
 # Step 11: Copy compiled JavaScript files from the build image
 COPY --from=build /app/dist /app
