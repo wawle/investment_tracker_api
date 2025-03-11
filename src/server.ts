@@ -1,3 +1,4 @@
+import path from "path";
 import dotenv from "dotenv";
 import express from "express";
 import morgan from "morgan";
@@ -11,7 +12,25 @@ import errorHandler from "./middleware/error";
 import connectDB from "./config/db";
 
 // Load env vars
-dotenv.config({ path: "./src/config/config.env" });
+const envPath = path.join(__dirname, "config", "config.env");
+const result = dotenv.config({ path: envPath });
+
+if (result.error) {
+  console.error("Error loading .env file:", result.error);
+  process.exit(1);
+}
+
+// Validate required environment variables
+const requiredEnvVars = ["JWT_SECRET", "JWT_EXPIRE", "MONGO_URI"];
+const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  console.error(
+    "Missing required environment variables:",
+    missingEnvVars.join(", ")
+  );
+  process.exit(1);
+}
 
 // Connect to database
 connectDB();

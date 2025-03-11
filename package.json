@@ -4,9 +4,10 @@
   "description": "Investment Tracker backend API",
   "main": "/src/server.ts",
   "scripts": {
-    "start": "NODE_ENV=production tsc && node dist/server.js",
+    "start": "NODE_ENV=production node dist/server.js",
     "dev": "nodemon -r ts-node/register src/server.ts",
-    "build": "tsc"
+    "build": "tsc && cp -r src/config dist/",
+    "postbuild": "cp src/config/config.env dist/config/"
   },
   "author": "Berkay Yucel",
   "license": "MIT",

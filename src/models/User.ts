@@ -69,13 +69,9 @@ const UserSchema: Schema<IUserModal> = new Schema(
 
 // Sign JWT and return
 UserSchema.methods.getSignedJwtToken = function () {
-  return jwt.sign(
-    { id: this._id },
-    "PAfu4P5sJSpnHXtlewTafWMAQ3Afki0zETjrrwWaTJU=",
-    {
-      expiresIn: "1h",
-    }
-  );
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET as string, {
+    expiresIn: process.env.JWT_EXPIRE as string,
+  });
 };
 
 // Match user entered password to hashed password in database
