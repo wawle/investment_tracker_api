@@ -43,17 +43,14 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Step 10: Install Puppeteer and Chromium
-RUN yarn add puppeteer
-
-# Step 11: Copy compiled JavaScript files from the build image
+# Step 10: Copy compiled JavaScript files from the build image
 COPY --from=build /app/dist /app
 
-# Step 12: Copy node_modules from the build image to the runtime image
+# Step 11: Copy node_modules from the build image to the runtime image
 COPY --from=build /app/node_modules /app/node_modules
 
-# Step 13: Start the application (assuming compiled files are in the "dist" folder)
+# Step 12: Start the application (assuming compiled files are in the "dist" folder)
 CMD ["node", "server.js"]
 
-# Step 14: Expose the application port
+# Step 13: Expose the application port
 EXPOSE 4000
