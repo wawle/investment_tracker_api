@@ -5,17 +5,13 @@ services:
       - "4000:4000"
     environment:
       - MONGO_URI=${MONGO_URI}
-      - PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
-      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
-    volumes:
-      - puppeteer_cache:/app/.cache/puppeteer
     networks:
       - mynetwork
     deploy:
       resources:
         limits:
-          cpus: "2.0"
-          memory: 8G
+          cpus: "0.5"
+          memory: 512M
         reservations:
           cpus: "1.0"
           memory: 4G
@@ -23,6 +19,3 @@ services:
 networks:
   mynetwork:
     driver: bridge
-
-volumes:
-  puppeteer_cache:

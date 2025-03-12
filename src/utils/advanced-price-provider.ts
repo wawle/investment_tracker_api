@@ -69,8 +69,6 @@ export const advancedPriceProvider = async (
       iterationCount++;
     }
 
-    console.log({ hasMoreData });
-
     // Extract ticker names and prices from the table
     const data = await page.evaluate(
       (allowedCurrencies: string[], priceCellIndex: number) => {

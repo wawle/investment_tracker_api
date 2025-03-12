@@ -45,23 +45,15 @@ RUN apt-get update && apt-get install -y \
 
 # Step 10: Install Puppeteer and Chromium
 RUN npm install puppeteer --save
-RUN npx puppeteer browsers install chrome
 
-# Step 11: Set Puppeteer cache directory and executable path
-ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
-
-# Step 12: Copy compiled JavaScript files from the build image
+# Step 10: Copy compiled JavaScript files from the build image
 COPY --from=build /app/dist /app
 
-# Step 13: Copy node_modules from the build image to the runtime image
+# Step 11: Copy node_modules from the build image to the runtime image
 COPY --from=build /app/node_modules /app/node_modules
 
-# Step 14: Create cache directory for Puppeteer
-RUN mkdir -p /app/.cache/puppeteer && chmod -R 777 /app/.cache
-
-# Step 15: Start the application (assuming compiled files are in the "dist" folder)
+# Step 12: Start the application (assuming compiled files are in the "dist" folder)
 CMD ["node", "server.js"]
 
-# Step 16: Expose the application port
+# Step 13: Expose the application port
 EXPOSE 4000
