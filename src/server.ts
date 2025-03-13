@@ -36,7 +36,11 @@ if (missingEnvVars.length > 0) {
 connectDB();
 
 // job files
-import { startDailyJob, startScheduler } from "./utils/scheduler";
+import {
+  startDailyJob,
+  startScheduler,
+  cleanupResources,
+} from "./utils/scheduler";
 
 // Route files
 import authRouter from "./routes/auth";
@@ -133,4 +137,17 @@ process.on("unhandledRejection", (err: Error, promise) => {
   console.log(`Error: ${err.message}`);
   // Close server & exit process
   // server.close(() => process.exit(1));
+});
+
+// Uygulama kapatılırken kaynakları temizle
+process.on("SIGINT", async () => {
+  console.log("Uygulama kapatılıyor, kaynaklar temizleniyor...");
+  await cleanupResources();
+  process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+  console.log("Uygulama sonlandırılıyor, kaynaklar temizleniyor...");
+  await cleanupResources();
+  process.exit(0);
 });

@@ -1,24 +1,35 @@
 import constants from "./constants";
-import puppeteer from "puppeteer";
+import puppeteer, { Browser, Page } from "puppeteer";
 import { Currency } from "./enums";
+import BrowserPool from "./browser-pool";
 
 export const advancedPriceProvider = async (
   url: string,
   priceCellIndex: number
 ) => {
   const allowedCurrencies = [Currency.TRY, Currency.USD];
-
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  }); // Launch browser
+  const browserPool = BrowserPool.getInstance();
+  let browser: Browser;
+  let page: Page | null = null;
 
   try {
-    const page = await browser.newPage(); // Create new page
+    browser = await browserPool.getBrowser();
+    page = await browser.newPage(); // Create new page
+
+    // Bellek kullanımını azaltmak için sayfa ayarları
+    await page.setRequestInterception(true);
+    page.on("request", (request) => {
+      // Gereksiz kaynakları engelle (resimler, fontlar, css, vb.)
+      if (["image", "stylesheet", "font"].includes(request.resourceType())) {
+        request.abort();
+      } else {
+        request.continue();
+      }
+    });
 
     if (!url) return [];
 
-    await page.goto(url, { timeout: 0, waitUntil: "networkidle0" });
+    await page.goto(url, { timeout: 60000, waitUntil: "networkidle0" });
 
     // Helper function to create a delay
     const delay = (ms: number) =>
@@ -26,13 +37,15 @@ export const advancedPriceProvider = async (
 
     // Function to load more data dynamically
     async function loadMoreData() {
+      if (!page) return false;
+
       const loadMoreButton = await page.$(
         "button span.content-D4RPB3ZC" // Adjust the selector to target the text container
       );
 
       if (loadMoreButton) {
         const buttonText = await page.evaluate(
-          (button) => button.innerText.trim(),
+          (button: HTMLElement) => button.innerText.trim(),
           loadMoreButton
         );
 
@@ -61,13 +74,15 @@ export const advancedPriceProvider = async (
     // Continuously load more data
     let hasMoreData = true;
     let iterationCount = 0;
-    const MAX_ITERATIONS = 10; // Prevent potential infinite loops
+    const MAX_ITERATIONS = 10;
 
     while (hasMoreData && iterationCount < MAX_ITERATIONS) {
       // Try to load more data
       hasMoreData = await loadMoreData();
       iterationCount++;
     }
+
+    if (!page) return [];
 
     // Extract ticker names and prices from the table
     const data = await page.evaluate(
@@ -152,6 +167,13 @@ export const advancedPriceProvider = async (
     console.error("Error in priceProvider:", error);
     return [];
   } finally {
-    await browser.close(); // Always close the browser
+    if (page) {
+      try {
+        await page.close(); // Sayfayı kapat
+      } catch (err) {
+        console.error("Error closing page:", err);
+      }
+    }
+    // Browser'ı kapatmıyoruz, havuz tarafından yönetiliyor
   }
 };

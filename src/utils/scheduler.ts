@@ -2,20 +2,44 @@ import cron from "node-cron";
 import Asset from "../models/Asset";
 import History from "../models/History"; // History modelini dahil ediyoruz
 import { fetchMarketData } from "../controllers/scraping";
+import BrowserPool from "./browser-pool";
+
+// İşlem kilitleri
+let scrapingInProgress = false;
+let dailyJobInProgress = false;
+
+// Bellek temizleme fonksiyonu
+const cleanupMemory = () => {
+  // Kullanılmayan nesneleri temizle
+  if (global.gc) {
+    global.gc();
+  }
+};
 
 // 15 dakikada bir market verilerini çek
 export const startScheduler = () => {
-  cron.schedule("*/15 * * * *", () => {
-    // Promise'i döndürmeden işlemi başlat
-    (async () => {
-      try {
-        console.log("Scraping started at", new Date().toLocaleString());
-        await fetchMarketData();
-        console.log("Scraping done at", new Date().toLocaleString());
-      } catch (error) {
-        console.error("Scraping error:", error);
-      }
-    })();
+  cron.schedule("*/15 * * * *", async () => {
+    // Eğer önceki işlem hala çalışıyorsa, yeni işlemi başlatma
+    if (scrapingInProgress) {
+      console.log(
+        "Önceki scraping işlemi hala devam ediyor, yeni işlem başlatılmıyor."
+      );
+      return;
+    }
+
+    scrapingInProgress = true;
+    try {
+      console.log("Scraping started at", new Date().toLocaleString());
+      await fetchMarketData();
+      console.log("Scraping done at", new Date().toLocaleString());
+
+      // İşlem bittikten sonra belleği temizle
+      cleanupMemory();
+    } catch (error) {
+      console.error("Scraping error:", error);
+    } finally {
+      scrapingInProgress = false;
+    }
   });
 };
 
@@ -59,24 +83,46 @@ const processDailyHistory = async () => {
 
 // Cron job for daily scraping and history creation
 export const startDailyJob = () => {
-  cron.schedule("59 23 * * *", () => {
-    // Promise'i döndürmeden işlemi başlat
-    (async () => {
-      try {
-        console.log(
-          "Daily scraping and history creation started at",
-          new Date().toLocaleString()
-        );
+  cron.schedule("59 23 * * *", async () => {
+    // Eğer önceki işlem hala çalışıyorsa, yeni işlemi başlatma
+    if (dailyJobInProgress) {
+      console.log(
+        "Önceki günlük işlem hala devam ediyor, yeni işlem başlatılmıyor."
+      );
+      return;
+    }
 
-        await processDailyHistory();
+    dailyJobInProgress = true;
+    try {
+      console.log(
+        "Daily scraping and history creation started at",
+        new Date().toLocaleString()
+      );
 
-        console.log(
-          "Daily scraping and history creation done at",
-          new Date().toLocaleString()
-        );
-      } catch (error) {
-        console.error("Daily job error:", error);
-      }
-    })();
+      await processDailyHistory();
+
+      console.log(
+        "Daily scraping and history creation done at",
+        new Date().toLocaleString()
+      );
+
+      // İşlem bittikten sonra belleği temizle
+      cleanupMemory();
+    } catch (error) {
+      console.error("Daily job error:", error);
+    } finally {
+      dailyJobInProgress = false;
+    }
   });
+};
+
+// Uygulama kapatılırken browser havuzunu temizle
+export const cleanupResources = async () => {
+  try {
+    const browserPool = BrowserPool.getInstance();
+    await browserPool.cleanup();
+    console.log("Browser resources cleaned up");
+  } catch (error) {
+    console.error("Error cleaning up resources:", error);
+  }
 };

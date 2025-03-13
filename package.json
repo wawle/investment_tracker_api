@@ -4,8 +4,8 @@
   "description": "Investment Tracker backend API",
   "main": "/src/server.ts",
   "scripts": {
-    "start": "NODE_ENV=production node dist/server.js",
-    "dev": "nodemon -r ts-node/register src/server.ts",
+    "start": "NODE_ENV=production node --expose-gc dist/server.js",
+    "dev": "nodemon -r ts-node/register --expose-gc src/server.ts",
     "build": "tsc && cp -r src/config dist/",
     "postbuild": "cp src/config/config.env dist/config/"
   },
