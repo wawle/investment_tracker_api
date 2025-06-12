@@ -32,8 +32,8 @@ jobs:
                cd /var/www/investment_tracker_api && \
                git pull origin main && \
                
-               # Clean up and redeploy
-               docker compose down --volumes --remove-orphans && \
-               docker compose up --build -d
+              # Clean up and redeploy
+              docker-compose down --remove-orphans && \
+              docker-compose up -d --build
              "
            fi
