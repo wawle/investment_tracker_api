@@ -1,11 +1,13 @@
 import puppeteer, { Browser, Page } from "puppeteer";
 
-type EtfRow = {
+type Row = {
   ticker: string;
   name: string;
   icon: string | null;
   price: number | null;
   change: number | null; // percent, e.g. -0.58 => -0.58%
+  sector: string | null;
+  currency: string | null;
 };
 
 async function configurePage(page: Page): Promise<void> {
@@ -66,7 +68,10 @@ async function scrollContainerOnce(page: Page): Promise<boolean> {
   });
 }
 
-export async function fetchScreener(url: string): Promise<EtfRow[]> {
+export async function fetchScreener(
+  url: string,
+  opts?: { sectorIndex?: number }
+): Promise<Row[]> {
   let browser: Browser | null = null;
   let page: Page | null = null;
 
@@ -100,11 +105,11 @@ export async function fetchScreener(url: string): Promise<EtfRow[]> {
 
     // Collect incrementally while scrolling through virtualized list
     const seen = new Set<string>();
-    const collected: EtfRow[] = [];
+    const collected: Row[] = [];
 
     const extractVisible = async () => {
-      const chunk: EtfRow[] = await page!.evaluate(
-        ({ priceIndex, changeIndex }) => {
+      const chunk: Row[] = await page!.evaluate(
+        ({ priceIndex, changeIndex, sectorIndex }) => {
           const getText = (el: Element | null | undefined) =>
             (el?.textContent || "").trim();
           const toNumber = (text: string | null) => {
@@ -117,7 +122,7 @@ export async function fetchScreener(url: string): Promise<EtfRow[]> {
             const n = parseFloat(normalized);
             return Number.isFinite(n) ? n : null;
           };
-          const items: EtfRow[] = [] as any;
+          const items: Row[] = [] as any;
           const trs = Array.from(
             document.querySelectorAll("tbody tr[data-rowkey], tbody tr")
           );
@@ -140,11 +145,25 @@ export async function fetchScreener(url: string): Promise<EtfRow[]> {
             const changeCell = changeIndex >= 0 ? tds[changeIndex] : tds[2];
             const changeText = getText(changeCell);
             const change = toNumber(changeText);
-            if (ticker) items.push({ ticker, name, icon, price, change });
+            const sectorCell =
+              typeof sectorIndex === "number" && sectorIndex >= 0
+                ? tds[sectorIndex]
+                : undefined;
+            const sector = getText(sectorCell as any) || null;
+            if (ticker)
+              items.push({
+                ticker,
+                name,
+                icon,
+                price,
+                change,
+                sector,
+                currency: "usd",
+              });
           }
           return items;
         },
-        { priceIndex, changeIndex }
+        { priceIndex, changeIndex, sectorIndex: opts?.sectorIndex }
       );
       let added = 0;
       for (const row of chunk) {

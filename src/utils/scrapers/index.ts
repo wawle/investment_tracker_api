@@ -6,18 +6,28 @@ type ScreenerRow = {
   icon: string | null;
   price: number | null;
   change: number | null;
+  sector: string | null;
 };
 
 export async function fetchEtf(): Promise<ScreenerRow[]> {
-  return fetchScreener("https://www.tradingview.com/etf-screener/");
+  // sectorIndex: ETF sector column is at td index 9 (0-based)
+  return fetchScreener("https://www.tradingview.com/etf-screener/", {
+    sectorIndex: 8,
+  });
 }
 
 export async function fetchStocks(): Promise<ScreenerRow[]> {
-  return fetchScreener("https://www.tradingview.com/screener/");
+  // sectorIndex: Stocks sector is at td index 10
+  return fetchScreener("https://www.tradingview.com/screener/", {
+    sectorIndex: 10,
+  });
 }
 
 export async function fetchCrypto(): Promise<ScreenerRow[]> {
-  return fetchScreener("https://www.tradingview.com/crypto-coins-screener/");
+  // sectorIndex: Crypto sector-like category is at td index 7
+  return fetchScreener("https://www.tradingview.com/crypto-coins-screener/", {
+    sectorIndex: 9,
+  });
 }
 
 export default { fetchEtf, fetchStocks, fetchCrypto };

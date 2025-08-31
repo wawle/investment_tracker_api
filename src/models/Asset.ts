@@ -22,6 +22,8 @@ export interface IAsset extends Document {
   icon?: string;
   name: string;
   currency: Currency;
+  change?: number;
+  sector?: string;
   createdAt: Date;
   updatedAt: Date;
   setPrice: (currency: Currency, price: number) => void;
@@ -41,6 +43,15 @@ const AssetSchema: Schema<IAsset> = new Schema(
     name: {
       type: String,
       required: [true, "Lütfen isim giriniz"],
+    },
+    change: {
+      type: Number,
+      required: false,
+    },
+    sector: {
+      type: String,
+      required: false,
+      default: "",
     },
     currency: {
       type: String,

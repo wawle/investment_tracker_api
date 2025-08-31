@@ -6,6 +6,7 @@ interface FundData {
   price: string;
   fundPrice?: number;
   dailyChange?: string;
+  currency: string;
 }
 
 export async function fetchFunds(): Promise<FundData[]> {
@@ -41,11 +42,12 @@ export async function fetchFunds(): Promise<FundData[]> {
     ...bloomberg,
   ].reduce<FundData[]>((acc, item) => {
     if (item.name && item.ticker && item.price) {
-      const fundPrice = parseFloat(item.price.replace(",", "."));
-      if (!isNaN(fundPrice)) {
+      const price = parseFloat(item.price.replace(",", "."));
+      if (!isNaN(price)) {
         acc.push({
           ...item,
-          fundPrice,
+          price: price.toString(),
+          currency: "try",
         });
       }
     }
@@ -92,7 +94,7 @@ async function fetchIsBankFunds(): Promise<FundData[]> {
       price = price.replace(/[\n\r\t]+/g, "").trim();
 
       // Return the cleaned-up data
-      return { name, ticker, price };
+      return { name, ticker, price, currency: "try" };
     });
   });
 
@@ -143,7 +145,7 @@ async function fetchYapiKrediBankFunds(): Promise<FundData[]> {
           .split("\n")[0] ?? "";
 
       // Return the cleaned-up data
-      return { name, ticker, price };
+      return { name, ticker, price, currency: "try" };
     });
   });
 
@@ -195,7 +197,7 @@ async function fetchAkBankFunds(): Promise<FundData[]> {
           ?.textContent?.trim() ?? "";
 
       // Return the cleaned-up data
-      return { ticker, name, price };
+      return { ticker, name, price, currency: "try" };
     });
   });
 
@@ -298,7 +300,7 @@ async function fetchZiraatFunds(): Promise<FundData[]> {
           const cells = row.querySelectorAll("td");
           const name = (cells[0]?.textContent || "").trim();
           const price = (cells[1]?.textContent || "").trim();
-          return { name, ticker: name, price };
+          return { name, ticker: name, price, currency: "try" };
         })
         .filter((x) => x.name && x.price);
     });
@@ -353,7 +355,7 @@ async function fetchBloombergFunds(): Promise<FundData[]> {
           const name = getCellText(row, 2);
           const price = getCellText(row, 3);
           const dailyChange = getCellText(row, 4);
-          return { ticker, name, price, dailyChange };
+          return { ticker, name, price, dailyChange, currency: "try" };
         })
         .filter((x) => x.ticker && x.name && x.price);
     });
@@ -394,7 +396,7 @@ async function getFundInfo(code: string): Promise<FundData> {
     const h1Text = document.querySelector("h1")?.textContent?.trim();
 
     if (!h1Text) {
-      return { ticker: "", name: "", price: "0" };
+      return { ticker: "", name: "", price: "0", currency: "try" };
     }
 
     // Split the text to get the fund code and fund name
@@ -410,7 +412,7 @@ async function getFundInfo(code: string): Promise<FundData> {
     const price = priceElement?.textContent?.trim() || "0";
 
     // Return the fund data object
-    return { name, ticker, price };
+    return { name, ticker, price, currency: "try" };
   });
 
   // Close the browser
@@ -455,6 +457,7 @@ async function fetchFundByTicker(url: string): Promise<FundData[]> {
         name: nameText.substring(0, 50), // Truncate if necessary
         ticker,
         price,
+        currency: "try",
       };
     });
 

@@ -6,8 +6,9 @@ import { scrapeGoldPrices } from "./commodity";
 import { fetchExchange } from "./exchange";
 import { fetchFunds } from "./funds";
 import { fetchIndices } from "./indicies";
-import { fetchTRStocks, fetchUsaStocks } from "./stocks";
+import { fetchTRStocks } from "./stocks";
 import { getConvertedPrice } from "../utils/rate-handler";
+import { fetchCrypto, fetchEtf, fetchStocks } from "../utils/scrapers";
 
 // @desc      Get all market data or data for a specific market
 // @route     GET /api/v1/scraping
@@ -42,24 +43,27 @@ export const getMarketData = async (req: Request, res: any) => {
             exchange,
             funds,
             indicies,
+            etf,
           ] = await Promise.all([
-            fetchUsaStocks(),
+            fetchStocks(),
             fetchTRStocks(),
-            priceProvider(Market.Crypto),
+            fetchCrypto(),
             scrapeGoldPrices(),
             fetchExchange(),
             fetchFunds(),
             fetchIndices(),
+            fetchEtf(),
           ]);
 
           await Promise.all([
-            updateAssetPrices(usaStocks, AssetMarket.USAStock),
-            updateAssetPrices(trStocks, AssetMarket.TRStock),
+            updateAssetPrices(usaStocks, AssetMarket.Stock),
+            updateAssetPrices(trStocks, AssetMarket.Stock),
             updateAssetPrices(crypto, AssetMarket.Crypto),
             updateAssetPrices(commodities, AssetMarket.Commodity),
             updateAssetPrices(exchange, AssetMarket.Exchange),
             updateAssetPrices(funds, AssetMarket.Fund),
             updateAssetPrices(indicies, AssetMarket.Indicies),
+            updateAssetPrices(etf, AssetMarket.Fund),
           ]);
         }
         console.log("Market verileri başarıyla güncellendi");
@@ -82,17 +86,17 @@ export const fetchMarketData = async () => {
     // Market verilerini paralel olarak çek ve güncelle
     const marketOperations = [
       {
-        fetch: fetchUsaStocks,
-        market: AssetMarket.USAStock,
+        fetch: fetchStocks,
+        market: AssetMarket.Stock,
         name: "USA Stocks",
       },
       {
         fetch: fetchTRStocks,
-        market: AssetMarket.TRStock,
+        market: AssetMarket.Stock,
         name: "TR Stocks",
       },
       {
-        fetch: () => priceProvider(Market.Crypto),
+        fetch: fetchCrypto,
         market: AssetMarket.Crypto,
         name: "Crypto",
       },
@@ -110,6 +114,11 @@ export const fetchMarketData = async () => {
         fetch: fetchFunds,
         market: AssetMarket.Fund,
         name: "Funds",
+      },
+      {
+        fetch: fetchEtf,
+        market: AssetMarket.Fund,
+        name: "ETF",
       },
       {
         fetch: fetchIndices,
@@ -156,39 +165,15 @@ export const fetchMarketData = async () => {
 // Her market türü için verileri eşleştiren fonksiyon
 const mapDataToAsset = (data: any[], market: AssetMarket) => {
   return data.map((item) => {
-    let currency: Currency;
-    let price = item.price;
-
-    // Default currency based on asset market
-    switch (market) {
-      case AssetMarket.TRStock:
-        currency = Currency.TRY;
-        break;
-      case AssetMarket.Exchange:
-        currency = Currency.TRY;
-        break;
-      case AssetMarket.Commodity:
-        currency = Currency.TRY;
-        break;
-      case AssetMarket.Fund:
-        price = item.fundPrice;
-        currency = Currency.TRY;
-        break;
-      case AssetMarket.USAStock:
-      case AssetMarket.Indicies:
-      case AssetMarket.Crypto:
-        currency = Currency.USD;
-        break;
-      default:
-        throw new Error(`Unknown market type: ${market}`);
-    }
     return {
       ticker: item.ticker, // Handle multiple field names for ticker
-      price, // Assuming `price` contains the base currency prices (e.g., TRY, USD, EUR)
-      currency: currency,
+      price: item.price, // Assuming `price` contains the base currency prices (e.g., TRY, USD, EUR)
+      currency: item.currency,
       icon: item.icon || "", // Default empty string if not provided
       name: item.name || "", // Handle multiple field names for name
-      market,
+      market: market,
+      sector: item.sector || "",
+      change: item.change || null,
     };
   });
 };
@@ -278,16 +263,16 @@ const updateAssetPrices = async (data: any[], market: AssetMarket) => {
 // Fetch data for a specific market
 const fetchMarketDataForSpecificMarket = async (market: AssetMarket) => {
   switch (market) {
-    case AssetMarket.USAStock:
-      const usaStocks = await fetchUsaStocks();
-      await updateAssetPrices(usaStocks, AssetMarket.USAStock);
-      return { usaStocks };
-
-    case AssetMarket.TRStock:
-      const trStocks = await fetchTRStocks();
-      await updateAssetPrices(trStocks, AssetMarket.TRStock);
-      return { trStocks };
-
+    case AssetMarket.Stock:
+      const [usaStocks, trStocks] = await Promise.all([
+        fetchStocks(),
+        fetchTRStocks(),
+      ]);
+      await Promise.all([
+        updateAssetPrices(usaStocks, AssetMarket.Stock),
+        updateAssetPrices(trStocks, AssetMarket.Stock),
+      ]);
+      return { usaStocks, trStocks };
     case AssetMarket.Crypto:
       const crypto = await priceProvider(Market.Crypto);
       await updateAssetPrices(crypto, AssetMarket.Crypto);
@@ -304,7 +289,8 @@ const fetchMarketDataForSpecificMarket = async (market: AssetMarket) => {
       return { exchange };
 
     case AssetMarket.Fund:
-      const funds = await fetchFunds();
+      const [trFunds, usaFunds] = await Promise.all([fetchFunds(), fetchEtf()]);
+      const funds = [...trFunds, ...usaFunds];
       await updateAssetPrices(funds, AssetMarket.Fund);
       return { funds };
 

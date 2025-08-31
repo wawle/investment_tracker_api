@@ -65,8 +65,7 @@ export default {
     },
   ],
   asset_type_list: [
-    { name: "TR Hisseleri", type: AssetMarket.TRStock },
-    { name: "USA Hisseleri", type: AssetMarket.USAStock },
+    { name: "Hisseler", type: AssetMarket.Stock },
     { name: "Emtia", type: AssetMarket.Commodity },
     { name: "Döviz", type: AssetMarket.Exchange },
     { name: "Fonlar", type: AssetMarket.Fund },

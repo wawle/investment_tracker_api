@@ -23,8 +23,7 @@ export enum Market {
 }
 
 export enum AssetMarket {
-  TRStock = "tr-stock",
-  USAStock = "usa-stock",
+  Stock = "stock",
   Exchange = "exchange",
   Fund = "fund",
   Commodity = "commodity",
