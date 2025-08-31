@@ -25,6 +25,10 @@ export default {
     },
     {
       url: "https://tradingview.com/markets/stocks-usa/sectorandindustry-industry/electronic-production-equipment",
+      market: Market.ElectronicProductionEquipment,
+    },
+    {
+      url: "https://www.tradingview.com/markets/stocks-usa/sectorandindustry-sector/electronic-technology/",
       market: Market.Electronic,
     },
     {

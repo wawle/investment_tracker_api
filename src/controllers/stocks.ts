@@ -65,6 +65,7 @@ export const fetchUsaStocks = async () => {
     Market.ETF,
     Market.FinanceRental,
     Market.USAFund,
+    Market.ElectronicProductionEquipment,
   ];
 
   // Fetch data for all the resources

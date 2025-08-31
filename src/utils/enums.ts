@@ -11,6 +11,7 @@ export enum Market {
   Bist100 = "bist100",
   SP500 = "sp500",
   Electronic = "electronic",
+  ElectronicProductionEquipment = "electronic-production-equipment",
   ETF = "etf",
   USAFund = "usa-fund",
   FinanceRental = "finance-rental",
