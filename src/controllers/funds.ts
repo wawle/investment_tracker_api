@@ -1,88 +1,44 @@
 import puppeteer from "puppeteer";
-import asyncHandler from "../middleware/async";
-import { NextFunction, Request, Response } from "express";
-import ErrorResponse from "../utils/errorResponse";
-
-// @desc      Get all funds
-// @route     GET /api/v1/funds
-// @access    Public
-export const getFunds = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    // Get the search query param (optional)
-    const search = req.query.search ? req.query.search.toString() : "";
-
-    const data = await fetchFunds();
-
-    // If a search term is provided, filter the data by fund name or code
-    const filteredData = search
-      ? data.filter(
-          (fund) =>
-            fund.name.toLowerCase().includes(search.toLowerCase()) ||
-            fund.ticker.toLowerCase().includes(search.toLowerCase())
-        )
-      : data;
-
-    // Send back the final response
-    res.status(200).json({
-      success: true,
-      data: filteredData, // Send the filtered data here
-    });
-  }
-);
-
-// @desc      Get single fund
-// @route     GET /api/v1/funds/:ticker
-// @access    Public
-export const getFundByTicker = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const fund = await fetchFundByTicker(req.params.ticker);
-    if (!fund) {
-      return next(
-        new ErrorResponse(
-          `fund not found with ticker of ${req.params.ticker}`,
-          404
-        )
-      );
-    }
-
-    res.status(200).json({
-      success: true,
-      data: fund,
-    });
-  }
-);
 
 interface FundData {
   name: string;
   ticker: string;
   price: string;
   fundPrice?: number;
+  dailyChange?: string;
 }
 
 export async function fetchFunds(): Promise<FundData[]> {
   // Fetch data from multiple sources using Promise.all
-  const [isbank, yapikredi, anadoluemeklilik, ydi, aet, bgl]: FundData[][] =
-    await Promise.all([
-      // fetchAkBankFunds(),
-      fetchIsBankFunds(),
-      fetchYapiKrediBankFunds(),
-      fetchBesFunds(),
-      fetchFundByTicker("https://www.yatirimdirekt.com/fon/fon_bulteni/YDI"),
-      fetchFundByTicker(
-        "https://www.yatirimdirekt.com/bes/bes_fon_bulteni/AET"
-      ),
-      fetchFundByTicker(
-        "https://www.yatirimdirekt.com/bes/bes_fon_bulteni/BGL"
-      ),
-    ]);
+  const [
+    akbank,
+    isbank,
+    yapikredi,
+    anadoluemeklilik,
+    ydi,
+    aet,
+    bgl,
+    bloomberg,
+  ]: FundData[][] = await Promise.all([
+    fetchAkBankFunds(),
+    fetchIsBankFunds(),
+    fetchYapiKrediBankFunds(),
+    fetchBesFunds(),
+    fetchFundByTicker("https://www.yatirimdirekt.com/fon/fon_bulteni/YDI"),
+    fetchFundByTicker("https://www.yatirimdirekt.com/bes/bes_fon_bulteni/AET"),
+    fetchFundByTicker("https://www.yatirimdirekt.com/bes/bes_fon_bulteni/BGL"),
+    fetchBloombergFunds(),
+  ]);
 
   const updatedFunds: FundData[] = [
+    ...akbank,
     ...isbank,
     ...yapikredi,
     ...anadoluemeklilik,
     ...ydi,
     ...aet,
     ...bgl,
+    ...bloomberg,
   ].reduce<FundData[]>((acc, item) => {
     if (item.name && item.ticker && item.price) {
       const fundPrice = parseFloat(item.price.replace(",", "."));
@@ -248,6 +204,164 @@ async function fetchAkBankFunds(): Promise<FundData[]> {
 
   // Return the extracted fund data
   return fundData;
+}
+
+async function fetchZiraatFunds(): Promise<FundData[]> {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+  const page = await browser.newPage();
+
+  try {
+    await page.goto("https://www.ziraatbank.com.tr/tr/fiyatlar-ve-oranlar", {
+      timeout: 0,
+      waitUntil: "domcontentloaded",
+    });
+
+    // Open the "Yatırım Fonları Fiyatları" accordion
+    await page.waitForSelector("#accordion6", { timeout: 30000 });
+    await page.click("#accordion6");
+    await page.waitForSelector("#content-6", { visible: true, timeout: 30000 });
+
+    // Prepare dates: start = first day of current month, end = today in dd.mm.yyyy
+    const formatDate = (d: Date) => {
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const yyyy = d.getFullYear();
+      return `${dd}.${mm}.${yyyy}`;
+    };
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startStr = formatDate(startOfMonth);
+    const endStr = formatDate(now);
+
+    // Fill the date inputs inside the accordion content
+    await page.waitForSelector("#content-6 #datePickerStart", {
+      timeout: 30000,
+    });
+    await page.waitForSelector("#content-6 #datePickerEnd", { timeout: 30000 });
+
+    await page.$eval(
+      "#content-6 #datePickerStart",
+      (el, value) => {
+        const input = el as HTMLInputElement;
+        input.value = value as string;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      },
+      startStr
+    );
+
+    await page.$eval(
+      "#content-6 #datePickerEnd",
+      (el, value) => {
+        const input = el as HTMLInputElement;
+        input.value = value as string;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      },
+      endStr
+    );
+
+    // Click the "Listele" button within the same content container
+    await page.evaluate(() => {
+      const container = document.querySelector(
+        "#content-6"
+      ) as HTMLElement | null;
+      if (!container) return;
+      const candidates = Array.from(
+        container.querySelectorAll("a.btn.btn-red, button.btn.btn-red")
+      ) as HTMLElement[];
+      const target = candidates.find((el) =>
+        (el.textContent || "").toLowerCase().includes("listele")
+      );
+      target?.click();
+    });
+
+    // Wait for the results table rows to appear
+    await page.waitForFunction(
+      () => {
+        const container = document.querySelector("#content-6");
+        const rows = container?.querySelectorAll("tbody tr");
+        return !!rows && rows.length > 0;
+      },
+      { timeout: 60000 }
+    );
+
+    // Extract name (first td) and price (second td). Default ticker = name.
+    const fundData: FundData[] = await page.evaluate(() => {
+      const container = document.querySelector("#content-6")!;
+      const rows = Array.from(container.querySelectorAll("tbody tr"));
+      return rows
+        .map((row) => {
+          const cells = row.querySelectorAll("td");
+          const name = (cells[0]?.textContent || "").trim();
+          const price = (cells[1]?.textContent || "").trim();
+          return { name, ticker: name, price };
+        })
+        .filter((x) => x.name && x.price);
+    });
+
+    return fundData;
+  } finally {
+    await browser.close();
+  }
+}
+
+async function fetchBloombergFunds(): Promise<FundData[]> {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+  const page = await browser.newPage();
+
+  try {
+    await page.goto(
+      "https://www.bloomberght.com/yatirim-fonlari/fon-karsilastirma",
+      {
+        timeout: 0,
+        waitUntil: "domcontentloaded",
+      }
+    );
+
+    // Wait for the comparison table rows
+    await page.waitForSelector('table[data-type="table-type1"] tbody tr', {
+      timeout: 60000,
+    });
+
+    const rows: FundData[] = await page.evaluate(() => {
+      const rowNodes = Array.from(
+        document.querySelectorAll<HTMLTableRowElement>(
+          'table[data-type="table-type1"] tbody tr'
+        )
+      );
+
+      const getCellText = (row: HTMLTableRowElement, index: number): string => {
+        const cell = row.querySelector<HTMLTableCellElement>(
+          `td:nth-of-type(${index})`
+        );
+        if (!cell) return "";
+        const anchor = cell.querySelector("a");
+        const text = (anchor?.textContent || cell.textContent || "").trim();
+        return text.replace(/\s+/g, " ");
+      };
+
+      return rowNodes
+        .map((row) => {
+          const ticker = getCellText(row, 1);
+          const name = getCellText(row, 2);
+          const price = getCellText(row, 3);
+          const dailyChange = getCellText(row, 4);
+          return { ticker, name, price, dailyChange };
+        })
+        .filter((x) => x.ticker && x.name && x.price);
+    });
+
+    return rows;
+  } finally {
+    await browser.close();
+  }
 }
 
 async function fetchBesFunds(): Promise<FundData[]> {

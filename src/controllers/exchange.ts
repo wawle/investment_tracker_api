@@ -30,7 +30,7 @@ export const fetchExchange = async (): Promise<
     ?.map((item: any) => ({
       ticker: item["$"].CurrencyCode,
       name: item.Isim,
-      currency_name: item.CurrencyName,
+      currency: item["$"].CurrencyCode.toLowerCase(),
       buy: item.BanknoteBuying,
       sell: item.BanknoteSelling,
       price: parseFloat(item.BanknoteSelling.replace(",", ".")),
@@ -40,7 +40,7 @@ export const fetchExchange = async (): Promise<
       (item: {
         ticker: string;
         name: string;
-        currency_name: string;
+        currency: string;
         buy: string;
         sell: string;
       }) => item.sell !== "" && item.sell !== null && item.sell !== undefined
@@ -67,7 +67,7 @@ export const getExchanges = asyncHandler(
             exchange.ticker
               .toLowerCase()
               .includes((search as string).toLowerCase()) ||
-            exchange.currency_name
+            exchange.currency
               .toLowerCase()
               .includes((search as string).toLowerCase())
         )

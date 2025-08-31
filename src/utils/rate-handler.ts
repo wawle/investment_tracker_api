@@ -111,7 +111,6 @@ export const getCurrencyAssets = async () => {
   const assetList = [
     { market: AssetMarket.Exchange, ticker: "EUR" },
     { market: AssetMarket.Exchange, ticker: "USD" },
-    { market: AssetMarket.Exchange, ticker: "TRY" },
   ];
 
   // Check if the assets already exist in the database
