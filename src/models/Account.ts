@@ -24,6 +24,8 @@ const AccountSchema: Schema<IAccount> = new Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
+AccountSchema.index({ name: 1, user: 1 }, { unique: true });
+
 // Cascade delete accounts when a Account is deleted
 AccountSchema.pre("findOneAndDelete", async function (next) {
   const accountId = (this as any)._conditions._id;

@@ -13,6 +13,9 @@ import Investment from "../models/Investment";
 import { getInvestmentPrices } from "../controllers/investments";
 
 const router = express.Router({ mergeParams: true });
+const { protect } = require("../middleware/auth");
+
+router.use(protect);
 
 // Get all Investments and create Investment
 router
@@ -20,7 +23,7 @@ router
   .get(
     advancedResults(Investment as any, {
       path: "asset",
-      select: "name price ticker market",
+      select: "name price ticker market currency icon",
     }),
     getInvestments
   )

@@ -61,7 +61,15 @@ class BrowserPool {
         "--disable-accelerated-2d-canvas", // Hızlandırılmış 2D canvas'ı devre dışı bırak
         "--disable-gpu", // GPU kullanımını devre dışı bırak
         "--js-flags=--max-old-space-size=512", // JavaScript heap boyutunu sınırla
+        "--disable-web-security", // Web security'i devre dışı bırak
+        "--disable-features=VizDisplayCompositor", // Compositor'ı devre dışı bırak
+        "--disable-extensions", // Extension'ları devre dışı bırak
+        "--disable-plugins", // Plugin'leri devre dışı bırak
+        "--disable-images", // Resimleri devre dışı bırak
+        "--disable-javascript", // JavaScript'i devre dışı bırak (gerekirse)
+        "--disable-css", // CSS'i devre dışı bırak (gerekirse)
       ],
+      timeout: 120000, // 2 dakika timeout
     });
 
     try {

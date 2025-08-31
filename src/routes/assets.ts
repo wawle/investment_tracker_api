@@ -7,6 +7,7 @@ import {
   deleteAsset,
   getAssetTypes,
   getTrendAssets,
+  getAssetBySymbol,
 } from "../controllers/assets";
 import advancedResults from "../middleware/advancedResults";
 import Asset from "../models/Asset";
@@ -24,5 +25,7 @@ router.route("/trends").get(getTrendAssets);
 
 // Get single Asset, update Asset, delete Asset
 router.route("/:id").get(getAsset).put(updateAsset).delete(deleteAsset);
+
+router.route("/symbol/:symbol").get(getAssetBySymbol);
 
 export default router;

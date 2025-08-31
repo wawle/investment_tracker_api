@@ -67,6 +67,8 @@ const UserSchema: Schema<IUserModal> = new Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } } // createdAt ve updatedAt alanlarını otomatik olarak ekler
 );
 
+UserSchema.index({ email: 1, phone: 1 }, { unique: true });
+
 // Sign JWT and return
 UserSchema.methods.getSignedJwtToken = function () {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET as any, {

@@ -16,8 +16,8 @@ export const priceProvider = async (market: string) => {
     // Bellek kullanımını azaltmak için sayfa ayarları
     await page.setRequestInterception(true);
     page.on("request", (request) => {
-      // Gereksiz kaynakları engelle (resimler, fontlar, css, vb.)
-      if (["image", "stylesheet", "font"].includes(request.resourceType())) {
+      // Allow images for icon extraction, but block other unnecessary resources
+      if (["stylesheet", "font"].includes(request.resourceType())) {
         request.abort();
       } else {
         request.continue();
@@ -161,6 +161,20 @@ export const priceProvider = async (market: string) => {
     return data;
   } catch (error) {
     console.error("Error in priceProvider:", error);
+
+    // Log specific error types for better debugging
+    if (error instanceof Error) {
+      if (error.message.includes("timeout")) {
+        console.error(
+          `Navigation timeout for market: ${market} - this may indicate network issues or TradingView rate limiting`
+        );
+      } else if (error.message.includes("net::ERR")) {
+        console.error(`Network error for market: ${market}: ${error.message}`);
+      } else {
+        console.error(`General error for market: ${market}: ${error.message}`);
+      }
+    }
+
     return [];
   } finally {
     if (page) {

@@ -11,10 +11,33 @@ const advancedResults =
     const reqQuery = { ...req.query };
 
     // Fields to exclude
-    const removeFields = ["select", "sort", "page", "limit"];
+    const removeFields = [
+      "select",
+      "sort",
+      "page",
+      "limit",
+      "search",
+      "searchFields",
+    ];
 
     // Loop over removeFields and delete them from reqQuery
     removeFields.forEach((param) => delete reqQuery[param]);
+    // Handle search functionality
+    if (req.query.search && req.query.searchFields) {
+      const searchTerm = req.query.search as string;
+      const searchFields = (req.query.searchFields as string).split(",");
+
+      if (searchTerm && searchFields.length > 0) {
+        const searchQuery = {
+          $or: searchFields.map((field) => ({
+            [field]: { $regex: searchTerm, $options: "i" },
+          })),
+        };
+
+        // Merge search query with existing query
+        Object.assign(reqQuery, searchQuery);
+      }
+    }
 
     // Handle 'like' operator in the query
     Object.keys(reqQuery).forEach((key) => {
@@ -95,6 +118,13 @@ const advancedResults =
       total,
       pagination,
       data: results,
+      searchInfo: req.query.search
+        ? {
+            searchTerm: req.query.search,
+            searchFields: req.query.searchFields,
+            resultsCount: results.length,
+          }
+        : undefined,
     };
 
     next();

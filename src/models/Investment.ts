@@ -42,6 +42,8 @@ const InvestmentSchema: Schema<IInvestment> = new Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
+InvestmentSchema.index({ asset: 1, account: 1 }, { unique: true });
+
 InvestmentSchema.pre("findOneAndUpdate", async function (next) {
   // Extract the updated fields from this object to check if 'price' is being updated.
   const update = this.getUpdate() as IInvestment;

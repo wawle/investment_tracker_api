@@ -280,7 +280,10 @@ export const getInvestments = asyncHandler(
 // @access    Public
 export const getInvestment = asyncHandler(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const investment = await Investment.findById(req.params.id);
+    const investment = await Investment.findById(req.params.id).populate(
+      "asset",
+      "name price ticker market currency icon"
+    );
 
     if (!investment) {
       return next(
@@ -919,13 +922,11 @@ const getRangeDate = (range: TimeRange) => {
   yesterday.setUTCHours(0, 0, 0, 0);
 
   const thisWeekFirstDay = new Date(today);
-
   thisWeekFirstDay.setDate(
     thisWeekFirstDay.getDate() - thisWeekFirstDay.getDay()
   );
   thisWeekFirstDay.setUTCHours(0, 0, 0, 0);
 
-  // UTC saatine göre ayarlama yapıyoruz
   const thisMonthFirstDay = new Date();
   thisMonthFirstDay.setDate(1);
   thisMonthFirstDay.setUTCHours(0, 0, 0, 0);
@@ -949,7 +950,7 @@ const getRangeDate = (range: TimeRange) => {
       createdAt = thisYearFirstDay;
       break;
     case TimeRange.ALL:
-      createdAt = new Date();
+      createdAt = new Date(0); // 1970-01-01 - tüm geçmiş
       break;
   }
 
@@ -1009,30 +1010,13 @@ export const proTotalBalance = asyncHandler(
       );
     }, 0);
 
-    console.log({
-      investments,
-      histories,
-    });
-
     let totalProfitLoss = 0;
     let totalProfitLossPercentage = 0;
 
     switch (range) {
       case TimeRange.DAILY:
-        totalProfitLoss = currentTotalBalance - historicalTotalBalance;
-        totalProfitLossPercentage =
-          (totalProfitLoss / historicalTotalBalance) * 100;
-        break;
       case TimeRange.WEEKLY:
-        totalProfitLoss = currentTotalBalance - historicalTotalBalance;
-        totalProfitLossPercentage =
-          (totalProfitLoss / historicalTotalBalance) * 100;
-        break;
       case TimeRange.MONTHLY:
-        totalProfitLoss = currentTotalBalance - historicalTotalBalance;
-        totalProfitLossPercentage =
-          (totalProfitLoss / historicalTotalBalance) * 100;
-        break;
       case TimeRange.YEARLY:
         totalProfitLoss = currentTotalBalance - historicalTotalBalance;
         totalProfitLossPercentage =
@@ -1040,8 +1024,7 @@ export const proTotalBalance = asyncHandler(
         break;
       case TimeRange.ALL:
         totalProfitLoss = currentTotalBalance - totalInvestment;
-        totalProfitLossPercentage =
-          (totalProfitLoss / currentTotalBalance) * 100;
+        totalProfitLossPercentage = (totalProfitLoss / totalInvestment) * 100;
         break;
     }
 
@@ -1071,6 +1054,7 @@ interface IMarketBalance {
       amount: number;
       avgPrice: number;
       currentPrice: number;
+      historyPrice?: number;
       balance: number;
       investment: number;
       profitLoss: number;
@@ -1124,14 +1108,34 @@ export const proMarketBalance = asyncHandler(
       )?.close_price[currency as Currency];
 
       const currentPrice = investment.asset.price[currency as Currency];
-      const avgPrice =
-        historyPrice || investment.avg_price[currency as Currency];
+      const avgPrice = investment.avg_price[currency as Currency];
       const balance = investment.amount * currentPrice;
+
       const totalInvestment = investment.amount * avgPrice;
-      const profitLoss = roundToTwoDecimalPlaces(balance - totalInvestment);
-      const profitLossPercentage = roundToTwoDecimalPlaces(
+      let profitLoss = roundToTwoDecimalPlaces(balance - totalInvestment);
+      let profitLossPercentage = roundToTwoDecimalPlaces(
         (profitLoss / totalInvestment) * 100
       );
+
+      // Range bazlı kar/zarar hesaplaması - mevcut profitLoss alanını güncelle
+      if ((range as TimeRange) !== TimeRange.ALL && historyPrice) {
+        // Range bazlı kar/zarar hesapla
+        const rangeStartPrice = historyPrice;
+        const rangeEndPrice = currentPrice;
+        const rangeBalance = investment.amount * rangeEndPrice;
+        const rangeInvestment = investment.amount * rangeStartPrice;
+
+        const rangeProfitLoss = roundToTwoDecimalPlaces(
+          rangeBalance - rangeInvestment
+        );
+        const rangeProfitLossPercentage = roundToTwoDecimalPlaces(
+          (rangeProfitLoss / rangeInvestment) * 100
+        );
+
+        // Mevcut alanları güncelle
+        profitLoss = rangeProfitLoss;
+        profitLossPercentage = rangeProfitLossPercentage;
+      }
 
       if (marketBalance) {
         marketBalance.investments.push({
@@ -1147,6 +1151,7 @@ export const proMarketBalance = asyncHandler(
           avgPrice,
           currentPrice,
           balance,
+          historyPrice,
           investment: totalInvestment,
           profitLoss,
           profitLossPercentage,
@@ -1167,6 +1172,7 @@ export const proMarketBalance = asyncHandler(
               avgPrice,
               currentPrice,
               balance,
+              historyPrice,
               investment: totalInvestment,
               profitLoss,
               profitLossPercentage,
@@ -1182,6 +1188,7 @@ export const proMarketBalance = asyncHandler(
       }
     });
 
+    // Calculate total profit/loss and percentage for the range
     marketBalances.forEach((marketBalance) => {
       marketBalance.totalBalance = marketBalance.investments.reduce(
         (acc, investment) => acc + investment.balance,

@@ -34,6 +34,29 @@ export const getAsset = asyncHandler(
   }
 );
 
+// @desc      Get single asset by symbol
+// @route     GET /api/v1/assets/symbol/:symbol
+// @access    Public
+export const getAssetBySymbol = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const asset = await Asset.findOne({ ticker: req.params.symbol });
+
+    if (!asset) {
+      return next(
+        new ErrorResponse(
+          `asset not found with symbol of ${req.params.symbol}`,
+          404
+        )
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      data: asset,
+    });
+  }
+);
+
 // @desc      Create asset
 // @route     POST /api/v1/assets
 // @access    Public

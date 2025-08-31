@@ -28,6 +28,8 @@ const HistorySchema: Schema<IHistory> = new Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
+HistorySchema.index({ asset: 1, createdAt: -1 });
+
 // Mongoose modelini dışa aktarıyoruz
 const History = mongoose.model<IHistory>("History", HistorySchema);
 

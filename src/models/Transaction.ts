@@ -42,6 +42,8 @@ const TransactionSchema: Schema<ITransaction> = new Schema(
   { timestamps: true }
 );
 
+TransactionSchema.index({ investment: 1, createdAt: -1 });
+
 const getAverageCost = async function (investmentId: string) {
   try {
     // Fetch investment with asset population

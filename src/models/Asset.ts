@@ -70,6 +70,16 @@ const AssetSchema: Schema<IAsset> = new Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
+AssetSchema.index({ ticker: 1, name: 1, market: 1 }, { unique: true });
+
+// Add text index for search functionality
+AssetSchema.index({ ticker: "text", name: "text" });
+
+// Add individual indexes for better search performance
+AssetSchema.index({ ticker: 1 });
+AssetSchema.index({ name: 1 });
+AssetSchema.index({ market: 1 });
+
 // Custom setter for the price field to handle conversion logic
 AssetSchema.methods.setPrice = async function (
   currency: Currency,
