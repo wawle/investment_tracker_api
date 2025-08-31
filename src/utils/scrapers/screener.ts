@@ -23,7 +23,7 @@ async function configurePage(page: Page): Promise<void> {
 
 async function waitForTable(page: Page): Promise<void> {
   // Wait until table body rows are available
-  await page.waitForSelector("tbody tr[data-rowkey]", { timeout: 60000 });
+  await page.waitForSelector("tbody tr[data-rowkey]", { timeout: 120000 });
 }
 
 async function scrollContainerOnce(page: Page): Promise<boolean> {
@@ -83,11 +83,14 @@ export async function fetchScreener(
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
       ],
-      timeout: 120000,
+      timeout: 180000,
+      protocolTimeout: 900000,
     });
     page = await browser.newPage();
+    page.setDefaultTimeout(180000);
+    page.setDefaultNavigationTimeout(180000);
     await configurePage(page);
-    await page.goto(url, { waitUntil: "networkidle0", timeout: 120000 });
+    await page.goto(url, { waitUntil: "networkidle0", timeout: 180000 });
 
     await waitForTable(page);
 

@@ -16,9 +16,9 @@ const cleanupMemory = () => {
   }
 };
 
-// 15 dakikada bir market verilerini çek
+// 30 dakikada bir market verilerini çek
 export const startScheduler = () => {
-  cron.schedule("*/15 * * * *", async () => {
+  cron.schedule("*/30 * * * *", async () => {
     // Eğer önceki işlem hala çalışıyorsa, yeni işlemi başlatma
     if (scrapingInProgress) {
       console.log(

@@ -6,7 +6,7 @@ class BrowserPool {
   private isInitializing: boolean = false;
   private initPromise: Promise<Browser> | null = null;
   private lastUsed: number = Date.now();
-  private maxIdleTime: number = 5 * 60 * 1000; // 5 dakika
+  private maxIdleTime: number = 10 * 60 * 1000; // 10 dakika
   private checkInterval: NodeJS.Timeout | null = null;
 
   private constructor() {
@@ -69,7 +69,8 @@ class BrowserPool {
         "--disable-javascript", // JavaScript'i devre dışı bırak (gerekirse)
         "--disable-css", // CSS'i devre dışı bırak (gerekirse)
       ],
-      timeout: 120000, // 2 dakika timeout
+      timeout: 240000, // 4 dakika timeout
+      protocolTimeout: 900000, // 15 dakika protokol timeout
     });
 
     try {
