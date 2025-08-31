@@ -7,7 +7,8 @@
     "start": "NODE_ENV=production node --expose-gc dist/server.js",
     "dev": "nodemon -r ts-node/register --expose-gc src/server.ts",
     "build": "tsc && cp -r src/config dist/",
-    "postbuild": "cp src/config/config.env dist/config/"
+    "postbuild": "cp src/config/config.env dist/config/",
+    "test:screeners": "ts-node src/scripts/test-screeners.ts"
   },
   "author": "Berkay Yucel",
   "license": "MIT",
