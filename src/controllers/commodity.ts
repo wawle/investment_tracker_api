@@ -30,6 +30,7 @@ export async function scrapeGoldPrices() {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    protocolTimeout: 3600000,
   }); // Set headless: false if you want to see the browser
   const page = await browser.newPage();
 

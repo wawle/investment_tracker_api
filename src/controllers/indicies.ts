@@ -21,6 +21,7 @@ export const fetchIndices = async () => {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    protocolTimeout: 3600000,
   });
 
   try {

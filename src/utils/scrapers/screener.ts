@@ -83,14 +83,14 @@ export async function fetchScreener(
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
       ],
-      timeout: 180000,
-      protocolTimeout: 900000,
+      timeout: 300000,
+      protocolTimeout: 3600000,
     });
     page = await browser.newPage();
-    page.setDefaultTimeout(180000);
-    page.setDefaultNavigationTimeout(180000);
+    page.setDefaultTimeout(300000);
+    page.setDefaultNavigationTimeout(300000);
     await configurePage(page);
-    await page.goto(url, { waitUntil: "networkidle0", timeout: 180000 });
+    await page.goto(url, { waitUntil: "networkidle0", timeout: 300000 });
 
     await waitForTable(page);
 

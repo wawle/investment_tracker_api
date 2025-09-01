@@ -69,8 +69,8 @@ class BrowserPool {
         "--disable-javascript", // JavaScript'i devre dışı bırak (gerekirse)
         "--disable-css", // CSS'i devre dışı bırak (gerekirse)
       ],
-      timeout: 240000, // 4 dakika timeout
-      protocolTimeout: 900000, // 15 dakika protokol timeout
+      timeout: 300000, // 5 dakika timeout
+      protocolTimeout: 3600000, // 60 dakika protokol timeout
     });
 
     try {

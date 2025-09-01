@@ -62,6 +62,7 @@ async function fetchIsBankFunds(): Promise<FundData[]> {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    protocolTimeout: 3600000,
   });
   const page = await browser.newPage();
 
@@ -110,6 +111,7 @@ async function fetchYapiKrediBankFunds(): Promise<FundData[]> {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    protocolTimeout: 3600000,
   });
   const page = await browser.newPage();
 
@@ -161,6 +163,7 @@ async function fetchAkBankFunds(): Promise<FundData[]> {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    protocolTimeout: 3600000,
   });
   const page = await browser.newPage();
 
@@ -212,6 +215,7 @@ async function fetchZiraatFunds(): Promise<FundData[]> {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    protocolTimeout: 3600000,
   });
   const page = await browser.newPage();
 
@@ -315,6 +319,7 @@ async function fetchBloombergFunds(): Promise<FundData[]> {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    protocolTimeout: 3600000,
   });
   const page = await browser.newPage();
 
@@ -382,6 +387,7 @@ async function getFundInfo(code: string): Promise<FundData> {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    protocolTimeout: 3600000,
   });
   const page = await browser.newPage();
   await page.goto(`https://www.besfongetirileri.com/fon-karti/${code}`, {
@@ -427,6 +433,7 @@ async function fetchFundByTicker(url: string): Promise<FundData[]> {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    protocolTimeout: 3600000,
   });
   const page = await browser.newPage();
 

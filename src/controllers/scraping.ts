@@ -86,9 +86,19 @@ export const fetchMarketData = async () => {
     // Market verilerini paralel olarak çek ve güncelle
     const marketOperations = [
       {
-        fetch: fetchStocks,
-        market: AssetMarket.Stock,
-        name: "USA Stocks",
+        fetch: fetchExchange,
+        market: AssetMarket.Exchange,
+        name: "Exchange",
+      },
+      {
+        fetch: scrapeGoldPrices,
+        market: AssetMarket.Commodity,
+        name: "Commodities",
+      },
+      {
+        fetch: fetchFunds,
+        market: AssetMarket.Fund,
+        name: "Funds",
       },
       {
         fetch: fetchTRStocks,
@@ -101,19 +111,9 @@ export const fetchMarketData = async () => {
         name: "Crypto",
       },
       {
-        fetch: scrapeGoldPrices,
-        market: AssetMarket.Commodity,
-        name: "Commodities",
-      },
-      {
-        fetch: fetchExchange,
-        market: AssetMarket.Exchange,
-        name: "Exchange",
-      },
-      {
-        fetch: fetchFunds,
-        market: AssetMarket.Fund,
-        name: "Funds",
+        fetch: fetchStocks,
+        market: AssetMarket.Stock,
+        name: "USA Stocks",
       },
       {
         fetch: fetchEtf,
@@ -227,6 +227,8 @@ const updateAssetPrices = async (data: any[], market: AssetMarket) => {
             name: item.name,
             icon: item.icon,
             updatedAt: new Date(),
+            sector: item.sector,
+            change: item.change,
           },
         },
         upsert: true,
