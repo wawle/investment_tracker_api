@@ -18,6 +18,7 @@ export async function fetchCrypto(): Promise<ScreenerRow[]> {
   // sectorIndex: Crypto sector-like category is at td index 7
   return fetchScreener("https://www.tradingview.com/crypto-coins-screener/", {
     sectorIndex: 9,
+    signalIndex: 10,
   });
 }
 

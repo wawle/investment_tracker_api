@@ -174,6 +174,7 @@ const mapDataToAsset = (data: any[], market: AssetMarket) => {
       market: market,
       sector: item.sector || "",
       change: item.change || null,
+      signal: item.signal || "",
     };
   });
 };
@@ -200,8 +201,10 @@ const updateAssetPrices = async (data: any[], market: AssetMarket) => {
     // Her bir item için price dönüşümünü yap
     const processedBatch = await Promise.all(
       batch.map(async (item) => {
+        const usedCurrency =
+          market === AssetMarket.Exchange ? Currency.TRY : item.currency;
         const convertedPrice = await getConvertedPrice(
-          item.currency,
+          usedCurrency,
           item.price
         );
         return {
@@ -229,6 +232,7 @@ const updateAssetPrices = async (data: any[], market: AssetMarket) => {
             updatedAt: new Date(),
             sector: item.sector,
             change: item.change,
+            signal: item.signal,
           },
         },
         upsert: true,
@@ -271,10 +275,10 @@ const fetchMarketDataForSpecificMarket = async (market: AssetMarket) => {
         fetchTRStocks(),
       ]);
       const stocks = [...usaStocks, ...trStocks];
-      await Promise.all([updateAssetPrices(stocks, AssetMarket.Stock)]);
+      await [updateAssetPrices(stocks, AssetMarket.Stock)];
       return { stocks };
     case AssetMarket.Crypto:
-      const crypto = await priceProvider(Market.Crypto);
+      const crypto = await fetchCrypto();
       await updateAssetPrices(crypto, AssetMarket.Crypto);
       return { crypto };
 

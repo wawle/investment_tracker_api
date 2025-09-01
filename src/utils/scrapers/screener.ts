@@ -8,6 +8,7 @@ export type ScreenerRow = {
   change: number | null;
   sector: string | null;
   currency: string | null;
+  signal: string | null;
 };
 
 async function configurePage(page: Page): Promise<void> {
@@ -70,10 +71,12 @@ async function scrollContainerOnce(page: Page): Promise<boolean> {
 
 export async function fetchScreener(
   url: string,
-  opts?: { sectorIndex?: number }
+  opts?: { sectorIndex?: number; signalIndex?: number }
 ): Promise<ScreenerRow[]> {
   let browser: Browser | null = null;
   let page: Page | null = null;
+
+  console.log({ opts });
 
   try {
     browser = await puppeteer.launch({
@@ -112,7 +115,7 @@ export async function fetchScreener(
 
     const extractVisible = async () => {
       const chunk: ScreenerRow[] = await page!.evaluate(
-        ({ priceIndex, changeIndex, sectorIndex }) => {
+        ({ priceIndex, changeIndex, sectorIndex, signalIndex }) => {
           const getText = (el: Element | null | undefined) =>
             (el?.textContent || "").trim();
           const toNumber = (text: string | null) => {
@@ -153,6 +156,12 @@ export async function fetchScreener(
                 ? tds[sectorIndex]
                 : undefined;
             const sector = getText(sectorCell as any) || null;
+            const signalCell =
+              typeof signalIndex === "number" && signalIndex >= 0
+                ? tds[signalIndex]
+                : undefined;
+            const signal = getText(signalCell as any) || null;
+            console.log({ signal, sector, signalIndex, sectorIndex });
             if (ticker)
               items.push({
                 ticker,
@@ -161,12 +170,18 @@ export async function fetchScreener(
                 price,
                 change,
                 sector,
+                signal,
                 currency: "usd",
               });
           }
           return items;
         },
-        { priceIndex, changeIndex, sectorIndex: opts?.sectorIndex }
+        {
+          priceIndex,
+          changeIndex,
+          sectorIndex: opts?.sectorIndex,
+          signalIndex: opts?.signalIndex,
+        }
       );
       let added = 0;
       for (const row of chunk) {
