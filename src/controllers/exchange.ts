@@ -37,16 +37,21 @@ export const fetchExchange = async (): Promise<
       icon: getCountryFlag(item["$"].CurrencyCode),
     }))
     .filter(
-      (item: {
-        ticker: string;
-        name: string;
-        currency: string;
-        buy: string;
-        sell: string;
-      }) => item.sell !== "" && item.sell !== null && item.sell !== undefined
+      (item: any) =>
+        item.sell !== "" && item.sell !== null && item.sell !== undefined
     ); // Filter out invalid 'sell' values
 
-  return exchange;
+  const tryExchange = {
+    ticker: "TRY",
+    name: "Türk Lirası",
+    currency: "try",
+    buy: 1,
+    sell: 1,
+    price: 1,
+    icon: getCountryFlag("TRY"),
+  };
+
+  return [...exchange, tryExchange];
 };
 
 // @desc      Get all exchange

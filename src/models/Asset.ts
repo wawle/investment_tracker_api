@@ -102,13 +102,15 @@ AssetSchema.methods.setPrice = async function (
 
 // Cascade delete Historys when a History is deleted
 AssetSchema.post("save", async function () {
-  this.setPrice(this.currency, this.price as any);
+  if (typeof this.price === "number") {
+    this.setPrice(this.currency, this.price as any);
+  }
 });
 
 AssetSchema.pre("findOneAndUpdate", async function (next) {
   // Extract the updated fields from this object to check if 'price' is being updated.
   const update = this.getUpdate() as IAsset;
-  if (update && update.price) {
+  if (update && update.price && typeof update.price === "number") {
     // Assuming `update.price` is the price to be converted and you want to handle currency conversion before update.
     const newPrice = update.price as any;
     const currency = update.currency;

@@ -1,5 +1,5 @@
 import constants from "./constants";
-import puppeteer, { Browser, Page } from "puppeteer";
+import { Browser, Page } from "puppeteer";
 import { Currency } from "./enums";
 import BrowserPool from "./browser-pool";
 
@@ -94,6 +94,8 @@ export const priceProvider = async (market: string) => {
           currency: string;
           icon: string | null;
           name: string;
+          change: number | null;
+          sector: string | null;
         }[] = [];
 
         // Iterate over rows to get ticker and price
@@ -123,8 +125,41 @@ export const priceProvider = async (market: string) => {
 
             // Extract the price from the column specified by priceIndex
             const priceCell: any = row.querySelectorAll("td")[2]; // Access the specified column by index
+            const changeCell: any = row.querySelectorAll("td")[3];
+            const sectorCell: any = row.querySelectorAll("td")[10];
             if (priceCell) {
               const priceText = priceCell.innerText.trim();
+              // Parse change percent if available (e.g., "−2.62%" or "+1.23%")
+              let changeValue: number | null = null;
+              if (changeCell) {
+                const changeText = changeCell.innerText.trim();
+                if (changeText) {
+                  const normalized = changeText
+                    .replace("−", "-")
+                    .replace("%", "")
+                    .replace(/,/g, "")
+                    .replace("+", "")
+                    .trim();
+                  const parsedChange = parseFloat(normalized);
+                  if (!Number.isNaN(parsedChange)) {
+                    changeValue = parsedChange;
+                  }
+                }
+              }
+
+              // Parse sector text if available
+              let sectorText: string | null = null;
+              if (sectorCell) {
+                const sectorAnchor: any = sectorCell.querySelector("a");
+                const rawSector = sectorAnchor
+                  ? (
+                      sectorAnchor.getAttribute("title") ||
+                      sectorAnchor.innerText ||
+                      ""
+                    ).trim()
+                  : sectorCell.innerText.trim();
+                sectorText = rawSector || null;
+              }
 
               // If both ticker name and price exist, push them into the result array
               if (priceText) {
@@ -143,6 +178,8 @@ export const priceProvider = async (market: string) => {
                     currency: currency?.toLowerCase() as Currency,
                     icon: iconSrc,
                     name: tickerDescription,
+                    change: changeValue,
+                    sector: sectorText,
                   });
                 }
               }

@@ -55,7 +55,7 @@ export async function scrapeGoldPrices() {
         const convertedPrice = parseFloat(
           satis.replace(".", "").replace(",", ".")
         );
-        return { name, alis, satis, price: convertedPrice };
+        return { name, alis, satis, price: convertedPrice, currency: "try" };
       })
       .filter(
         (item) =>

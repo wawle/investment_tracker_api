@@ -1,13 +1,4 @@
-import { fetchScreener } from "./screener";
-
-type ScreenerRow = {
-  ticker: string;
-  name: string;
-  icon: string | null;
-  price: number | null;
-  change: number | null;
-  sector: string | null;
-};
+import { fetchScreener, ScreenerRow } from "./screener";
 
 export async function fetchEtf(): Promise<ScreenerRow[]> {
   // sectorIndex: ETF sector column is at td index 9 (0-based)

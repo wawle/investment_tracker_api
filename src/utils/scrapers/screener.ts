@@ -1,11 +1,11 @@
 import puppeteer, { Browser, Page } from "puppeteer";
 
-type Row = {
+export type ScreenerRow = {
   ticker: string;
   name: string;
   icon: string | null;
   price: number | null;
-  change: number | null; // percent, e.g. -0.58 => -0.58%
+  change: number | null;
   sector: string | null;
   currency: string | null;
 };
@@ -71,7 +71,7 @@ async function scrollContainerOnce(page: Page): Promise<boolean> {
 export async function fetchScreener(
   url: string,
   opts?: { sectorIndex?: number }
-): Promise<Row[]> {
+): Promise<ScreenerRow[]> {
   let browser: Browser | null = null;
   let page: Page | null = null;
 
@@ -108,10 +108,10 @@ export async function fetchScreener(
 
     // Collect incrementally while scrolling through virtualized list
     const seen = new Set<string>();
-    const collected: Row[] = [];
+    const collected: ScreenerRow[] = [];
 
     const extractVisible = async () => {
-      const chunk: Row[] = await page!.evaluate(
+      const chunk: ScreenerRow[] = await page!.evaluate(
         ({ priceIndex, changeIndex, sectorIndex }) => {
           const getText = (el: Element | null | undefined) =>
             (el?.textContent || "").trim();
@@ -125,7 +125,7 @@ export async function fetchScreener(
             const n = parseFloat(normalized);
             return Number.isFinite(n) ? n : null;
           };
-          const items: Row[] = [] as any;
+          const items: ScreenerRow[] = [] as any;
           const trs = Array.from(
             document.querySelectorAll("tbody tr[data-rowkey], tbody tr")
           );

@@ -36,22 +36,22 @@ export const getMarketData = async (req: Request, res: any) => {
           await fetchMarketDataForSpecificMarket(market as AssetMarket);
         } else {
           const [
-            usaStocks,
-            trStocks,
-            crypto,
-            commodities,
             exchange,
+            trStocks,
+            commodities,
             funds,
             indicies,
+            usaStocks,
+            crypto,
             etf,
           ] = await Promise.all([
-            fetchStocks(),
-            fetchTRStocks(),
-            fetchCrypto(),
-            scrapeGoldPrices(),
             fetchExchange(),
+            fetchTRStocks(),
+            scrapeGoldPrices(),
             fetchFunds(),
             fetchIndices(),
+            fetchStocks(),
+            fetchCrypto(),
             fetchEtf(),
           ]);
 
@@ -270,11 +270,9 @@ const fetchMarketDataForSpecificMarket = async (market: AssetMarket) => {
         fetchStocks(),
         fetchTRStocks(),
       ]);
-      await Promise.all([
-        updateAssetPrices(usaStocks, AssetMarket.Stock),
-        updateAssetPrices(trStocks, AssetMarket.Stock),
-      ]);
-      return { usaStocks, trStocks };
+      const stocks = [...usaStocks, ...trStocks];
+      await Promise.all([updateAssetPrices(stocks, AssetMarket.Stock)]);
+      return { stocks };
     case AssetMarket.Crypto:
       const crypto = await priceProvider(Market.Crypto);
       await updateAssetPrices(crypto, AssetMarket.Crypto);
