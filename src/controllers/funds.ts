@@ -5,7 +5,7 @@ interface FundData {
   ticker: string;
   price: string;
   fundPrice?: number;
-  dailyChange?: string;
+  change?: string;
   currency: string;
 }
 
@@ -16,30 +16,27 @@ export async function fetchFunds(): Promise<FundData[]> {
     isbank,
     yapikredi,
     anadoluemeklilik,
-    ydi,
     aet,
     bgl,
     bloomberg,
   ]: FundData[][] = await Promise.all([
+    fetchBloombergFunds(),
     fetchAkBankFunds(),
     fetchIsBankFunds(),
     fetchYapiKrediBankFunds(),
     fetchBesFunds(),
-    fetchFundByTicker("https://www.yatirimdirekt.com/fon/fon_bulteni/YDI"),
     fetchFundByTicker("https://www.yatirimdirekt.com/bes/bes_fon_bulteni/AET"),
     fetchFundByTicker("https://www.yatirimdirekt.com/bes/bes_fon_bulteni/BGL"),
-    fetchBloombergFunds(),
   ]);
 
   const updatedFunds: FundData[] = [
+    ...bloomberg,
     ...akbank,
     ...isbank,
     ...yapikredi,
     ...anadoluemeklilik,
-    ...ydi,
     ...aet,
     ...bgl,
-    ...bloomberg,
   ].reduce<FundData[]>((acc, item) => {
     if (item.name && item.ticker && item.price) {
       const price = parseFloat(item.price.replace(",", "."));
@@ -359,8 +356,8 @@ async function fetchBloombergFunds(): Promise<FundData[]> {
           const ticker = getCellText(row, 1);
           const name = getCellText(row, 2);
           const price = getCellText(row, 3);
-          const dailyChange = getCellText(row, 4);
-          return { ticker, name, price, dailyChange, currency: "try" };
+          const change = getCellText(row, 4);
+          return { ticker, name, price, change, currency: "try" };
         })
         .filter((x) => x.ticker && x.name && x.price);
     });

@@ -1,5 +1,5 @@
 import { createCountryFlagUrl } from ".";
-import { AssetMarket, Market } from "./enums";
+import { AssetMarket, Currency, Market } from "./enums";
 
 export default {
   market_list: [
@@ -65,12 +65,46 @@ export default {
     },
   ],
   asset_type_list: [
-    { name: "Hisseler", type: AssetMarket.Stock },
-    { name: "Emtia", type: AssetMarket.Commodity },
-    { name: "Döviz", type: AssetMarket.Exchange },
-    { name: "Fonlar", type: AssetMarket.Fund },
-    { name: "Kripto paralar", type: AssetMarket.Crypto },
-    { name: "Endeksler", type: AssetMarket.Indicies },
+    {
+      name: "TR Hisseleri",
+      url: "/tr-stocks",
+      query: { market: AssetMarket.Stock, currency: Currency.TRY },
+    },
+    {
+      name: "US Hisseleri",
+      url: "/usa-stocks",
+      query: { market: AssetMarket.Stock, currency: Currency.USD },
+    },
+    {
+      name: "Emtia",
+      url: "/commodities",
+      query: { market: AssetMarket.Commodity },
+    },
+    {
+      name: "Döviz",
+      url: "/exchanges",
+      query: { market: AssetMarket.Exchange },
+    },
+    {
+      name: "Fonlar",
+      url: "/funds",
+      query: { market: AssetMarket.Fund, currency: Currency.TRY },
+    },
+    {
+      name: "ETF",
+      url: "/etfs",
+      query: { market: AssetMarket.Fund, currency: Currency.USD },
+    },
+    {
+      name: "Kripto paralar",
+      url: "/crypto",
+      query: { market: AssetMarket.Crypto },
+    },
+    {
+      name: "Endeksler",
+      url: "/indicies",
+      query: { market: AssetMarket.Indicies },
+    },
   ],
   countries: [
     {

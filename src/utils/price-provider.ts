@@ -96,6 +96,7 @@ export const priceProvider = async (market: string) => {
           name: string;
           change: number | null;
           sector: string | null;
+          signal: string | null;
         }[] = [];
 
         // Iterate over rows to get ticker and price
@@ -127,6 +128,7 @@ export const priceProvider = async (market: string) => {
             const priceCell: any = row.querySelectorAll("td")[2]; // Access the specified column by index
             const changeCell: any = row.querySelectorAll("td")[3];
             const sectorCell: any = row.querySelectorAll("td")[10];
+            const signalCell: any = row.querySelectorAll("td")[11];
             if (priceCell) {
               const priceText = priceCell.innerText.trim();
               // Parse change percent if available (e.g., "−2.62%" or "+1.23%")
@@ -161,6 +163,19 @@ export const priceProvider = async (market: string) => {
                 sectorText = rawSector || null;
               }
 
+              let signalText: string | null = null;
+              if (signalCell) {
+                const signalAnchor: any = signalCell.querySelector("a");
+                const rawSignal = signalAnchor
+                  ? (
+                      signalAnchor.getAttribute("title") ||
+                      signalAnchor.innerText ||
+                      ""
+                    ).trim()
+                  : signalCell.innerText.trim();
+                signalText = rawSignal || null;
+              }
+
               // If both ticker name and price exist, push them into the result array
               if (priceText) {
                 const [price, currency] = priceText.split(" ");
@@ -180,6 +195,7 @@ export const priceProvider = async (market: string) => {
                     name: tickerDescription,
                     change: changeValue,
                     sector: sectorText,
+                    signal: signalText,
                   });
                 }
               }

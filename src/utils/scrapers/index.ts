@@ -11,6 +11,7 @@ export async function fetchStocks(): Promise<ScreenerRow[]> {
   // sectorIndex: Stocks sector is at td index 10
   return fetchScreener("https://www.tradingview.com/screener/", {
     sectorIndex: 10,
+    signalIndex: 11,
   });
 }
 
