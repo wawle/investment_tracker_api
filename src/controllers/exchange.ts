@@ -5,6 +5,7 @@ import { NextFunction, Request, Response } from "express";
 import { getCountryFlag } from "../utils";
 import { getCurrencyRates } from "../utils/currency-converter";
 import { getRateValues } from "../utils/rate-handler";
+import { Currency } from "../utils/enums";
 
 export const fetchExchange = async (): Promise<
   {
@@ -30,7 +31,7 @@ export const fetchExchange = async (): Promise<
     ?.map((item: any) => ({
       ticker: item["$"].CurrencyCode,
       name: item.Isim,
-      currency: item["$"].CurrencyCode.toLowerCase(),
+      currency: Currency.TRY,
       buy: item.BanknoteBuying,
       sell: item.BanknoteSelling,
       price: parseFloat(item.BanknoteSelling.replace(",", ".")),
@@ -44,7 +45,7 @@ export const fetchExchange = async (): Promise<
   const tryExchange = {
     ticker: "TRY",
     name: "Türk Lirası",
-    currency: "try",
+    currency: Currency.TRY,
     buy: 1,
     sell: 1,
     price: 1,
