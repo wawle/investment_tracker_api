@@ -1,14 +1,17 @@
 import { Request } from "express";
 import Asset from "../models/Asset";
-import { AssetMarket, Currency, Market } from "../utils/enums";
-import { priceProvider } from "../utils/price-provider";
+import { AssetMarket, Currency } from "../utils/enums";
 import { scrapeGoldPrices } from "./commodity";
 import { fetchExchange } from "./exchange";
 import { fetchFunds } from "./funds";
 import { fetchIndices } from "./indicies";
-import { fetchTRStocks } from "./stocks";
 import { getConvertedPrice } from "../utils/rate-handler";
-import { fetchCrypto, fetchEtf, fetchStocks } from "../utils/scrapers";
+import {
+  fetchCrypto,
+  fetchEtf,
+  fetchStocks,
+  fetchTrStocks,
+} from "../utils/scrapers";
 
 // @desc      Get all market data or data for a specific market
 // @route     GET /api/v1/scraping
@@ -46,7 +49,7 @@ export const getMarketData = async (req: Request, res: any) => {
             etf,
           ] = await Promise.all([
             fetchExchange(),
-            fetchTRStocks(),
+            fetchTrStocks(),
             scrapeGoldPrices(),
             fetchFunds(),
             fetchIndices(),
@@ -101,7 +104,7 @@ export const fetchMarketData = async () => {
         name: "Funds",
       },
       {
-        fetch: fetchTRStocks,
+        fetch: fetchTrStocks,
         market: AssetMarket.Stock,
         name: "TR Stocks",
       },
@@ -272,7 +275,7 @@ const fetchMarketDataForSpecificMarket = async (market: AssetMarket) => {
     case AssetMarket.Stock:
       const [usaStocks, trStocks] = await Promise.all([
         fetchStocks(),
-        fetchTRStocks(),
+        fetchTrStocks(),
       ]);
       const stocks = [...usaStocks, ...trStocks];
       await [updateAssetPrices(stocks, AssetMarket.Stock)];

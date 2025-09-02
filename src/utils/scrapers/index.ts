@@ -1,4 +1,5 @@
 import { fetchScreener, ScreenerRow } from "./screener";
+import fetchTradingViewScreener from "./tr-screener";
 
 export async function fetchEtf(): Promise<ScreenerRow[]> {
   // sectorIndex: ETF sector column is at td index 9 (0-based)
@@ -23,4 +24,11 @@ export async function fetchCrypto(): Promise<ScreenerRow[]> {
   });
 }
 
-export default { fetchEtf, fetchStocks, fetchCrypto };
+export async function fetchTrStocks(): Promise<ScreenerRow[]> {
+  return fetchTradingViewScreener({
+    sectorIndex: 10,
+    signalIndex: 11,
+  });
+}
+
+export default { fetchEtf, fetchStocks, fetchCrypto, fetchTrStocks };

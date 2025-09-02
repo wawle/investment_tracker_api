@@ -9,6 +9,7 @@ yarn.lock
 
 # Ignore environment variables file
 .env
+config/config.env
 
 # Ignore logs
 *.log

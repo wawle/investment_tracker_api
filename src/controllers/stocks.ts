@@ -99,7 +99,7 @@ export const fetchUsaStocks = async () => {
   return uniqueData;
 };
 
-export const fetchTRStocks = async () => {
+export const v1fetchTRStocks = async () => {
   // Get the search query param (optional)
   const fetchResources = [
     Market.Bist100,
